@@ -51,8 +51,7 @@ class DefaultUDPServerSpec extends AnyFlatSpec with Matchers {
       maxClientTimeout = MaxClientTimeout(100000)
     )
     val server = DefaultUDPServer[IO](serverPort, receiver)
-
-    for {
+    val effect = for {
       _ <- server.run().start // Start the server in a separate fiber
       _ <- IO(Thread.sleep(100)) // Wait for the server to start up
       _ <- client.send(expectedDatagram.to, expectedDatagram.data)
@@ -61,6 +60,8 @@ class DefaultUDPServerSpec extends AnyFlatSpec with Matchers {
       ) // Wait for the datagram to be received and handled
       _ <- server.stop() // Stop the server
     } yield succeed
+
+    effect.unsafeRunSync()
   }
 
 }
