@@ -19,10 +19,11 @@ final case class DefaultUDPServer[F[_]: Async](
     receiver: UDPDatagramReceiver[F]
 ) extends UDPServer[F] {
 
+  private val acceptor = new NioDatagramAcceptor()
+
   override def run(): F[Unit] = Dispatcher[F].use(dispatcher =>
     Async[F].delay {
       val handler = new UDPServerHandlerAdapter[F](dispatcher, receiver)
-      val acceptor = new NioDatagramAcceptor()
       val config = acceptor.getSessionConfig.asInstanceOf[DatagramSessionConfig]
       config.setReuseAddress(true)
       config.setBroadcast(true)
@@ -32,5 +33,9 @@ final case class DefaultUDPServer[F[_]: Async](
       acceptor.bind(new InetSocketAddress(serverPort.value))
     }
   )
+
+  override def stop(): F[Unit] = Async[F].delay {
+    acceptor.dispose()
+  }
 
 }

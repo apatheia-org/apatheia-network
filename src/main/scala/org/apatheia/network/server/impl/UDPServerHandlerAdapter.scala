@@ -57,16 +57,18 @@ class UDPServerHandlerAdapter[F[_]: Async](
       localAddress: InetSocketAddress,
       senderAddress: InetSocketAddress,
       data: Array[Byte]
-  ): EitherT[F, UDPServerError, UDPDatagram] = for {
-    udpDatagram <- EitherT.rightT[F, UDPServerError](
-      UDPDatagram(
-        from = senderAddress,
-        to = localAddress,
-        data = data
+  ): EitherT[F, UDPServerError, UDPDatagram] = {
+    for {
+      udpDatagram <- EitherT.rightT[F, UDPServerError](
+        UDPDatagram(
+          from = senderAddress,
+          to = localAddress,
+          data = data
+        )
       )
-    )
-    _ <- EitherT.right(receiver.onUDPDatagramReceived(udpDatagram))
-  } yield (udpDatagram)
+      _ <- EitherT.right(receiver.onUDPDatagramReceived(udpDatagram))
+    } yield (udpDatagram)
+  }
 
   private def logError(udpError: UDPServerError): F[Unit] =
     logger.error(s"UDP Receiving Error: ${udpError.message}")
