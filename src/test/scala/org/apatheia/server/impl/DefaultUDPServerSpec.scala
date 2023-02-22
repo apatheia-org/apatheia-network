@@ -1,0 +1,66 @@
+package org.apatheia.server.impl
+
+import org.apatheia.network.server._
+import org.apatheia.network.server.impl._
+import cats.effect.IO
+import cats.effect.unsafe.implicits.global
+import java.net.InetSocketAddress
+import org.apatheia.network.model.ServerPort
+import org.scalatest.flatspec.AnyFlatSpec
+import org.apatheia.network.model.UDPDatagram
+import org.scalatest.matchers.should.Matchers
+import org.apatheia.network.client.impl.DefaultUDPClient
+import org.apatheia.network.model.MaxClientBufferSize
+import org.apatheia.network.model.MaxClientTimeout
+
+class DefaultUDPServerSpec extends AnyFlatSpec with Matchers {
+
+  val serverPort = ServerPort(9999)
+
+  "DefaultUDPServer" should "start and stop successfully" in {
+    val receiver = new UDPDatagramReceiver[IO] {
+      override def onUDPDatagramReceived(datagram: UDPDatagram): IO[Unit] =
+        IO.unit
+    }
+    val server = DefaultUDPServer[IO](serverPort, receiver)
+
+    for {
+      _ <- server.run().start // Start the server in a separate fiber
+      _ <- IO(Thread.sleep(100)) // Wait for the server to start up
+      _ <- server.stop() // Stop the server
+    } yield succeed
+  }
+
+  it should "receive and handle a UDP datagram successfully" in {
+    val expectedDatagram = UDPDatagram(
+      from = new InetSocketAddress("localhost", 8888),
+      to = new InetSocketAddress("localhost", serverPort.value),
+      data = Array[Byte](1, 2, 3, 4)
+    )
+
+    val receiver = new UDPDatagramReceiver[IO] {
+      override def onUDPDatagramReceived(datagram: UDPDatagram): IO[Unit] = {
+        IO {
+          datagram shouldBe expectedDatagram
+        }
+      }
+    }
+
+    val client = DefaultUDPClient[IO](
+      maxBufferSize = MaxClientBufferSize(100000),
+      maxClientTimeout = MaxClientTimeout(100000)
+    )
+    val server = DefaultUDPServer[IO](serverPort, receiver)
+
+    for {
+      _ <- server.run().start // Start the server in a separate fiber
+      _ <- IO(Thread.sleep(100)) // Wait for the server to start up
+      _ <- client.send(expectedDatagram.to, expectedDatagram.data)
+      _ <- IO(
+        Thread.sleep(100)
+      ) // Wait for the datagram to be received and handled
+      _ <- server.stop() // Stop the server
+    } yield succeed
+  }
+
+}

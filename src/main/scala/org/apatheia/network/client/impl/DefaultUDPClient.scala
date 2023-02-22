@@ -49,6 +49,7 @@ final case class DefaultUDPClient[F[_]: Async: LiftIO](
         Try({
           val buffer: IoBuffer = IoBuffer.allocate(maxBufferSize.value)
           buffer.put(udpData)
+          buffer.flip()
           future.getSession.write(buffer)
           Either.right((): Unit)
         }).toOption.getOrElse(
