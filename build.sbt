@@ -13,11 +13,16 @@ lazy val root = (project in file(".")).settings(
     // standard "effect" library (Queues, Console, Random etc.)
     "org.typelevel" %% "cats-effect-std" % "3.3.12",
 
-    // apatheia protocol
-    "org.apatheia" %% "apatheia-p2p-protocol" % "0.0.1-alpha",
+    // log4cats
+    "org.typelevel" %% "log4cats-slf4j" % "2.5.0",
 
-    // better monadic for compiler plugin as suggested by documentation
-    compilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
+    // network brutalismus
+    "org.apache.mina" % "mina-core" % "2.2.1",
+
+    // apatheia protocol
+    "org.apatheia" %% "apatheia-p2p-protocol" % "0.0.2-alpha",
+
+    // test
     "org.scalactic" %% "scalactic" % "3.2.15",
     "org.scalatest" %% "scalatest" % "3.2.15" % "test",
     "org.scalatestplus" %% "mockito-4-6" % "3.2.15.0" % "test",
