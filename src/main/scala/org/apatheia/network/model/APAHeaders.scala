@@ -1,9 +1,9 @@
 package org.apatheia.network.model
 
-import org.apatheia.model.NodeId
+import org.apatheia.model.Contact
 
 final case class APAHeaders(
-    from: NodeId,
-    to: NodeId,
+    from: Contact,
+    to: Contact,
     opId: OpId
 )
