@@ -11,7 +11,7 @@ import org.slf4j
 
 final case class UDPClientHandlerAdapter() extends IoHandlerAdapter {
 
-  val logger = slf4j.LoggerFactory.getLogger("UDP Client")
+  val logger = slf4j.LoggerFactory.getLogger(this.getClass())
 
   override def exceptionCaught(session: IoSession, cause: Throwable): Unit =
     logger.debug(s"UDP Client Error: ${cause.getMessage()}")
