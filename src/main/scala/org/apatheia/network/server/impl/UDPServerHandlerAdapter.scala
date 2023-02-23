@@ -20,7 +20,7 @@ import cats.effect.unsafe.IORuntime
 
 case class UDPServerHandlerAdapter(
     receiver: UDPDatagramReceiver[IO]
-)(implicit ioRuntime: IORuntime)
+)(implicit dispatcher: Dispatcher[IO])
     extends IoHandlerAdapter {
 
   val logger = Slf4jLogger.getLoggerFromClass[IO](this.getClass())
@@ -100,7 +100,7 @@ case class UDPServerHandlerAdapter(
       }
     })
 
-    receivedDatagram.unsafeRunSync()
+    dispatcher.unsafeRunAndForget(receivedDatagram)
   }
 
 }

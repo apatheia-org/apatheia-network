@@ -2,6 +2,8 @@ package org.apatheia.network.server.impl
 
 import org.apatheia.network.model.ServerPort
 import cats.effect.kernel.Async
+import cats.effect.kernel.Concurrent
+import cats.effect.kernel.Spawn
 import org.apache.mina.transport.socket.nio.NioDatagramAcceptor
 import org.apache.mina.transport.socket.DatagramSessionConfig
 import java.net.InetSocketAddress
@@ -20,7 +22,7 @@ import cats.effect.unsafe.IORuntime
 final case class DefaultUDPServer[F[_]: Async](
     serverPort: ServerPort,
     receiver: UDPDatagramReceiver[IO]
-)(implicit ioRuntime: IORuntime)
+)(implicit dispatcher: Dispatcher[IO])
     extends UDPServer[F] {
 
   private val acceptor = new NioDatagramAcceptor()
