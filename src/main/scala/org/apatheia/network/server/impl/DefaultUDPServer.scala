@@ -17,22 +17,29 @@ import org.apatheia.network.server.UDPDatagramReceiver
 final case class DefaultUDPServer[F[_]: Async](
     serverPort: ServerPort,
     receiver: UDPDatagramReceiver[F]
-) extends UDPServer[F] {
+)(implicit dispatcher: Dispatcher[F])
+    extends UDPServer[F] {
 
   private val acceptor = new NioDatagramAcceptor()
 
-  override def run(): F[Unit] = Dispatcher[F].use(dispatcher =>
-    Async[F].delay {
-      val handler = new UDPServerHandlerAdapter[F](dispatcher, receiver)
-      val config = acceptor.getSessionConfig.asInstanceOf[DatagramSessionConfig]
-      config.setReuseAddress(true)
-      config.setBroadcast(true)
-      config.setReceiveBufferSize(65536)
-
-      acceptor.setHandler(handler)
-      acceptor.bind(new InetSocketAddress(serverPort.value))
-    }
-  )
+  override def run(): F[Unit] =
+    for {
+      handler <- Async[F].delay(
+        UDPServerHandlerAdapter(receiver)
+      )
+      config <- Async[F].delay {
+        val config =
+          acceptor.getSessionConfig.asInstanceOf[DatagramSessionConfig]
+        config.setReuseAddress(true)
+        config.setBroadcast(true)
+        config.setReceiveBufferSize(65536)
+        config
+      }
+      _ <- Async[F].delay {
+        acceptor.setHandler(handler)
+        acceptor.bind(new InetSocketAddress(serverPort.value))
+      }
+    } yield ()
 
   override def stop(): F[Unit] = Async[F].delay {
     acceptor.dispose()

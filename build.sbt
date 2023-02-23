@@ -14,6 +14,7 @@ lazy val root = (project in file(".")).settings(
     "org.typelevel" %% "cats-effect-std" % "3.3.12",
 
     // log4cats+logback
+    "org.typelevel" %% "log4cats-core" % "2.5.0",
     "org.typelevel" %% "log4cats-slf4j" % "2.5.0",
     "ch.qos.logback" % "logback-classic" % "1.4.5",
 

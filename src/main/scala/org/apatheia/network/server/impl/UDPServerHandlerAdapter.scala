@@ -14,13 +14,14 @@ import cats.effect.kernel.Async
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 import org.apatheia.network.server.UDPDatagramReceiver
 import org.apatheia.network.error.UDPServerError
+import org.slf4j
 
-class UDPServerHandlerAdapter[F[_]: Async](
-    dispatcher: Dispatcher[F],
+case class UDPServerHandlerAdapter[F[_]: Async](
     receiver: UDPDatagramReceiver[F]
-) extends IoHandlerAdapter {
+)(implicit dispatcher: Dispatcher[F])
+    extends IoHandlerAdapter {
 
-  val logger = Slf4jLogger.getLogger[F]
+  val logger = Slf4jLogger.getLoggerFromClass[F](this.getClass())
 
   private def extract[A](
       a: => A,
@@ -34,17 +35,19 @@ class UDPServerHandlerAdapter[F[_]: Async](
 
   private def extractLocalAddress(
       session: IoSession
-  ): EitherT[F, UDPServerError, InetSocketAddress] = extract[InetSocketAddress](
-    session.getLocalAddress.asInstanceOf[InetSocketAddress],
-    UDPServerError.ExtractAddressError
-  )
+  ): EitherT[F, UDPServerError, InetSocketAddress] =
+    extract[InetSocketAddress](
+      session.getLocalAddress.asInstanceOf[InetSocketAddress],
+      UDPServerError.ExtractAddressError
+    )
 
   private def extractSenderAddress(
       session: IoSession
-  ): EitherT[F, UDPServerError, InetSocketAddress] = extract[InetSocketAddress](
-    session.getRemoteAddress.asInstanceOf[InetSocketAddress],
-    UDPServerError.ExtractAddressError
-  )
+  ): EitherT[F, UDPServerError, InetSocketAddress] =
+    extract[InetSocketAddress](
+      session.getRemoteAddress.asInstanceOf[InetSocketAddress],
+      UDPServerError.ExtractAddressError
+    )
 
   private def extractData(
       message: Any
@@ -73,9 +76,10 @@ class UDPServerHandlerAdapter[F[_]: Async](
   private def logError(udpError: UDPServerError): F[Unit] =
     logger.error(s"UDP Receiving Error: ${udpError.message}")
 
-  private def logSuccess(udpDatagram: UDPDatagram): F[Unit] = logger.debug(
-    s"UDP Datagram successfully received: ${udpDatagram.toString()}"
-  )
+  private def logSuccess(udpDatagram: UDPDatagram): F[Unit] =
+    logger.debug(
+      s"UDP Datagram successfully received: ${udpDatagram.toString()}"
+    )
 
   override def messageReceived(session: IoSession, message: Object): Unit = {
     val receivedDatagram = (for {
@@ -87,12 +91,12 @@ class UDPServerHandlerAdapter[F[_]: Async](
         senderAddress = senderAddress,
         data = data
       )
-    } yield (datagram)).value.flatMap {
-      _ match {
+    } yield (datagram)).value.flatMap(e => {
+      e match {
         case Right(datagram) => logSuccess(datagram)
         case Left(e)         => logError(e)
       }
-    }
+    })
 
     dispatcher.unsafeRunAndForget(receivedDatagram)
   }
