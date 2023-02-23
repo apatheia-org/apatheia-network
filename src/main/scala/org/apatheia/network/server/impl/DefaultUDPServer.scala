@@ -2,8 +2,6 @@ package org.apatheia.network.server.impl
 
 import org.apatheia.network.model.ServerPort
 import cats.effect.kernel.Async
-import cats.effect.kernel.Concurrent
-import cats.effect.kernel.Spawn
 import org.apache.mina.transport.socket.nio.NioDatagramAcceptor
 import org.apache.mina.transport.socket.DatagramSessionConfig
 import java.net.InetSocketAddress
@@ -15,7 +13,6 @@ import org.apache.mina.core.buffer.IoBuffer
 import org.apatheia.network.model.UDPDatagram
 import org.apatheia.network.server.UDPServer
 import org.apatheia.network.server.UDPDatagramReceiver
-import cats.effect.kernel.Resource
 
 final case class DefaultUDPServer[F[_]: Async](
     serverPort: ServerPort,
