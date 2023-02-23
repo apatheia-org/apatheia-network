@@ -15,29 +15,27 @@ import org.typelevel.log4cats.slf4j.Slf4jLogger
 import org.apatheia.network.server.UDPDatagramReceiver
 import org.apatheia.network.error.UDPServerError
 import org.slf4j
-import cats.effect.IO
-import cats.effect.unsafe.IORuntime
 
-case class UDPServerHandlerAdapter(
-    receiver: UDPDatagramReceiver[IO]
-)(implicit dispatcher: Dispatcher[IO])
+case class UDPServerHandlerAdapter[F[_]: Async](
+    receiver: UDPDatagramReceiver[F]
+)(implicit dispatcher: Dispatcher[F])
     extends IoHandlerAdapter {
 
-  val logger = Slf4jLogger.getLoggerFromClass[IO](this.getClass())
+  val logger = Slf4jLogger.getLoggerFromClass[F](this.getClass())
 
   private def extract[A](
       a: => A,
       updError: UDPServerError
-  ): EitherT[IO, UDPServerError, A] =
+  ): EitherT[F, UDPServerError, A] =
     EitherT
-      .fromEither[IO](
+      .fromEither[F](
         Try(a).toEither
       )
-      .leftFlatMap(_ => EitherT.leftT[IO, A](updError))
+      .leftFlatMap(_ => EitherT.leftT[F, A](updError))
 
   private def extractLocalAddress(
       session: IoSession
-  ): EitherT[IO, UDPServerError, InetSocketAddress] =
+  ): EitherT[F, UDPServerError, InetSocketAddress] =
     extract[InetSocketAddress](
       session.getLocalAddress.asInstanceOf[InetSocketAddress],
       UDPServerError.ExtractAddressError
@@ -45,7 +43,7 @@ case class UDPServerHandlerAdapter(
 
   private def extractSenderAddress(
       session: IoSession
-  ): EitherT[IO, UDPServerError, InetSocketAddress] =
+  ): EitherT[F, UDPServerError, InetSocketAddress] =
     extract[InetSocketAddress](
       session.getRemoteAddress.asInstanceOf[InetSocketAddress],
       UDPServerError.ExtractAddressError
@@ -53,7 +51,7 @@ case class UDPServerHandlerAdapter(
 
   private def extractData(
       message: Any
-  ): EitherT[IO, UDPServerError, Array[Byte]] = extract[Array[Byte]](
+  ): EitherT[F, UDPServerError, Array[Byte]] = extract[Array[Byte]](
     message.asInstanceOf[IoBuffer].array(),
     UDPServerError.ExtractBufferError
   )
@@ -62,9 +60,9 @@ case class UDPServerHandlerAdapter(
       localAddress: InetSocketAddress,
       senderAddress: InetSocketAddress,
       data: Array[Byte]
-  ): EitherT[IO, UDPServerError, UDPDatagram] = {
+  ): EitherT[F, UDPServerError, UDPDatagram] = {
     for {
-      udpDatagram <- EitherT.rightT[IO, UDPServerError](
+      udpDatagram <- EitherT.rightT[F, UDPServerError](
         UDPDatagram(
           from = senderAddress,
           to = localAddress,
@@ -75,10 +73,10 @@ case class UDPServerHandlerAdapter(
     } yield (udpDatagram)
   }
 
-  private def logError(udpError: UDPServerError): IO[Unit] =
+  private def logError(udpError: UDPServerError): F[Unit] =
     logger.error(s"UDP Receiving Error: ${udpError.message}")
 
-  private def logSuccess(udpDatagram: UDPDatagram): IO[Unit] =
+  private def logSuccess(udpDatagram: UDPDatagram): F[Unit] =
     logger.debug(
       s"UDP Datagram successfully received: ${udpDatagram.toString()}"
     )
