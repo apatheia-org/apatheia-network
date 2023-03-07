@@ -1,3 +1,5 @@
 package org.apatheia.network.model
 
-final case class KadResponsePayload(data: Array[Byte])
+import org.apatheia.model.Contact
+
+final case class KadResponsePayload(contact: Contact, data: Array[Byte])
