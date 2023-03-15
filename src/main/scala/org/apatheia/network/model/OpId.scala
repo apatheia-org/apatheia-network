@@ -27,4 +27,7 @@ object OpId extends PackageDataParser[OpId] {
         Left(PackageDataParsingError("Error while parsing OpId corrupt data"))
       )
   }
+
+  def random: OpId = OpId(UUID.randomUUID())
+
 }

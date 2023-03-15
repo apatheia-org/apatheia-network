@@ -5,11 +5,8 @@ import org.apatheia.model.PackageDataParser
 import org.apatheia.error.PackageDataParsingError
 import org.apatheia.network.model.UDPDatagramParser
 
-case class KadDatagramPackage(
-    headers: KadHeaders,
-    payload: KadDatagramPayload,
-    udpDatagram: UDPDatagram
-) extends PackageData {
+case class KadDatagramPackage(headers: KadHeaders, payload: KadDatagramPayload)
+    extends PackageData {
   override def toByteArray: Array[Byte] =
     Array.concat(headers.toByteArray, payload.toByteArray)
 }
@@ -22,5 +19,5 @@ object KadDatagramPackage extends UDPDatagramParser[KadDatagramPackage] {
     payload <- KadDatagramPayload.parse(
       udpDatagram.data.drop(KadHeaders.byteSize)
     )
-  } yield (KadDatagramPackage(headers, payload, udpDatagram))
+  } yield (KadDatagramPackage(headers, payload))
 }

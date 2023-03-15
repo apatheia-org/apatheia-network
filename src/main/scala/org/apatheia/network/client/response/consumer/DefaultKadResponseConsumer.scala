@@ -9,28 +9,33 @@ import java.time.LocalDateTime
 import cats.instances.duration
 import java.time.temporal.TemporalUnit
 import java.time.temporal.ChronoUnit
+import org.typelevel.log4cats.slf4j.Slf4jLogger
 
 final case class DefaultKadResponseConsumer[F[_]: Async](
     responseKeyStore: ResponseStoreRef[F]
 ) extends KadResponseConsumer[F] {
+
+  private val logger = Slf4jLogger.getLogger[F]
 
   private def retryConsumeResponse(opId: OpId, timeLimit: LocalDateTime)(
       f1: Int = 0,
       f2: Int = 1
   ): F[Option[KadResponsePackage]] = {
     val sleepTime: Int = f2 * 100
-    val result = for {
+    val response = for {
       _ <- Async[F].sleep(sleepTime.millis)
       response <- responseKeyStore.get(opId)
     } yield (response)
 
-    val now: LocalDateTime = LocalDateTime.now()
-    if (timeLimit.isAfter(now)) {
-      result.orElse(
+    if (timeLimit.isAfter(LocalDateTime.now())) {
+      response.orElse(
         retryConsumeResponse(opId, timeLimit)(f2, f1 + f2)
       )
     } else {
-      Async[F].pure(None)
+      logger
+        .debug(s"Consume response operation for ${opId.value.toString()}")
+        .flatMap(_ => Async[F].pure(None))
+
     }
   }
 
