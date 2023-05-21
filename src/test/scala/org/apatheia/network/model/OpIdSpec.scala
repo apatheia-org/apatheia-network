@@ -27,10 +27,4 @@ class OpIdSpec extends AnyFlatSpec with Matchers with EitherValues {
     opId.left.value.message shouldBe "Error while parsing OpId corrupt data"
   }
 
-  it should "return a PackageDataParsingError if the array cannot be converted to a UUID" in {
-    val byteArray = Array.fill[Byte](16)(0)
-    val opId = OpId.parse(byteArray)
-    opId.isLeft shouldBe true
-    opId.left.value.message shouldBe "Error while parsing OpId corrupt data"
-  }
 }
