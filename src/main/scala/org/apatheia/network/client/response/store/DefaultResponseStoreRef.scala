@@ -17,12 +17,6 @@ case class DefaultResponseStoreRef[F[_]: Async](
     cell.get.flatMap(map => Async[F].pure(map.get(opId)))
 
   override def store(opId: OpId, response: KadResponsePackage): F[Unit] =
-    cell
-      .evalModify(store =>
-        Async[F].delay {
-          (store, store.put(opId, response))
-        }
-      )
-      .flatMap(_ => Async[F].unit)
+    cell.modify(store => (store.put(opId, response), store))
 
 }

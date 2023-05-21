@@ -15,6 +15,9 @@ import org.apatheia.network.model.KadCommand
 import org.apatheia.model.NodeId
 import cats.implicits._
 import java.net.InetSocketAddress
+import java.nio.charset.StandardCharsets
+import org.apatheia.error.PackageDataParsingError
+import org.typelevel.log4cats.slf4j.Slf4jLogger
 
 final case class DefaultFindNodeClient[F[_]: Async](
     kadResponseConsumer: KadResponseConsumer[F],
@@ -22,6 +25,37 @@ final case class DefaultFindNodeClient[F[_]: Async](
     udpClient: UDPClient[F],
     defaultLocalhostMetadataRef: DefaultLocalhostMetadataRef[F]
 ) extends FindNodeClient[F] {
+
+  private val CONTACT_TAG: String = "[CONTACT]"
+  private val logger = Slf4jLogger.getLogger[F]
+
+  override def requestContacts(
+      remote: Contact,
+      target: NodeId
+  ): F[List[Contact]] = {
+    val contactsResponse: F[Either[PackageDataParsingError, List[Contact]]] =
+      for {
+        kadDatagramPackage <- toKadDatagramPackage(remote, target)
+        _ <- udpClient.send(
+          new InetSocketAddress(remote.ip, remote.port),
+          kadDatagramPackage.toByteArray
+        )
+        response <- kadResponseConsumer.consumeResponse(
+          opId = kadDatagramPackage.headers.opId,
+          timeout = responseTimeout
+        )
+        contacts <- toContacts(response)
+      } yield (contacts)
+
+    // try to parse contacts response
+    contactsResponse.flatMap {
+      _ match {
+        case Left(error) =>
+          logger.error(error.message) *> Async[F].pure(List.empty)
+        case Right(contacts) => Async[F].pure(contacts)
+      }
+    }
+  }
 
   private def toKadDatagramPackage(
       remote: Contact,
@@ -43,35 +77,94 @@ final case class DefaultFindNodeClient[F[_]: Async](
       }
     )
 
+  private def raiseUnexpectedCommandError(
+      opId: OpId
+  ): F[Either[PackageDataParsingError, List[Contact]]] = Async[F].pure(
+    Left(
+      PackageDataParsingError(
+        s"Unexpected Command for Op(${opId.value})"
+      )
+    )
+  )
+
+  private def parsePayloadDataToContacts(
+      response: KadResponsePackage
+  ): F[Either[PackageDataParsingError, List[Contact]]] = {
+    // Extract indexes of Contact tags
+    val payloadData: Array[Byte] = response.payload.data
+    val indexes: Seq[Int] =
+      findPatternIndexes(
+        CONTACT_TAG.getBytes(StandardCharsets.UTF_8),
+        payloadData
+      )
+
+    // slice the contacts using the indexes
+    val result = indexes
+      .sliding(2, 1)
+      .map(pairSeq => {
+        pairSeq match {
+          case Seq(x)    => Contact.parse(payloadData.slice(x, 0))
+          case Seq(x, y) => Contact.parse(payloadData.slice(x, y))
+        }
+      })
+
+    // collect the errors
+    val errors: Iterator[PackageDataParsingError] = result
+      .flatMap(_ match {
+        case Left(error) => List(error)
+        case _           => List()
+      })
+
+    // compute final response result
+    val finalResult: Either[PackageDataParsingError, List[Contact]] =
+      if (errors.isEmpty) {
+        Right(result.toList.flatMap(_ match {
+          case Right(contact) => List(contact)
+          case _              => List()
+        }))
+      } else {
+        Left(
+          PackageDataParsingError(
+            s"Error while parsing response contacts:\n\n ${errors.map(_.message).mkString("\n")}"
+          )
+        )
+      }
+
+    Async[F].pure(finalResult)
+  }
+
   private def toContacts(
       responsePackage: Option[KadResponsePackage]
-  ): F[List[Contact]] = ???
-  // responsePackage.map(kadDatagram => kadDatagram.payload.)
+  ): F[Either[PackageDataParsingError, List[Contact]]] =
+    responsePackage
+      .map(responsePkg =>
+        if (responsePkg.payload.command != KadCommand.FindNode) {
+          raiseUnexpectedCommandError(responsePkg.headers.opId)
+        } else {
+          parsePayloadDataToContacts(responsePkg)
+        }
+      )
+      .getOrElse(Async[F].pure(Right(List.empty)))
 
-  override def requestContacts(
-      remote: Contact,
-      target: NodeId
-  ): F[List[Contact]] = for {
-    kadDatagramPackage <- toKadDatagramPackage(remote, target)
-    _ <- udpClient.send(
-      new InetSocketAddress(remote.ip, remote.port),
-      kadDatagramPackage.toByteArray
-    )
-    response <- kadResponseConsumer.consumeResponse(
-      opId = kadDatagramPackage.headers.opId,
-      timeout = responseTimeout
-    )
-    contacts <- toContacts(response)
-  } yield (contacts)
+  private def findPatternIndexes(
+      pattern: Array[Byte],
+      data: Array[Byte]
+  ): Seq[Int] = {
+    val patternLength = pattern.length
+    val dataLength = data.length
 
-  // use network information contained in Contact object will be used by UDP client
-  // send request to the target
-  // once request is sent, initialize retry on ResponseStore through response consumer
-  // if response is not empty parse the byte array received from ext. server into a List of contacts
-  // if response is None return an empty list
+    if (patternLength > dataLength) {
+      Seq.empty[Int]
+    } else {
+      val maxStartIndex = dataLength - patternLength
+      val patternStartByte = pattern(0)
 
-  // this is real software engineering
-  // not bureacractic and dogmatic playshit: GOF Design patterns, SOLID, Hexagonal arch(it's not hexagonal btw)
-  // time 4 a fucking smoke
+      (0 to maxStartIndex).filter { i =>
+        data(i) == patternStartByte && pattern.indices.forall(j =>
+          data(i + j) == pattern(j)
+        )
+      }
+    }
+  }
 
 }
