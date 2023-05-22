@@ -6,4 +6,6 @@ final case class UDPDatagram(
     from: InetSocketAddress,
     to: InetSocketAddress,
     data: Array[Byte]
-)
+) {
+  override def toString = s"UDPDatagram(${data.mkString})"
+}

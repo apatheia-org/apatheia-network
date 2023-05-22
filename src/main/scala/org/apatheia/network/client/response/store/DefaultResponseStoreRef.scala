@@ -14,9 +14,9 @@ case class DefaultResponseStoreRef[F[_]: Async](
 ) extends ResponseStoreRef[F] {
 
   override def get(opId: OpId): F[Option[KadResponsePackage]] =
-    cell.get.flatMap(map => Async[F].pure(map.get(opId)))
+    cell.get.map(_.get(opId))
 
   override def store(opId: OpId, response: KadResponsePackage): F[Unit] =
-    cell.modify(store => (store.put(opId, response), store))
+    cell.update(_.put(opId, response))
 
 }

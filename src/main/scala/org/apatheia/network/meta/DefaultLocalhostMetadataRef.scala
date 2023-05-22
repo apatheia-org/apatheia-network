@@ -4,6 +4,7 @@ import cats.effect.std.AtomicCell
 import cats.effect.kernel.Async
 import org.apatheia.network.model.OpId
 import org.apatheia.network.model.KadResponsePackage
+import org.apatheia.network.model.LocalhostMetadata
 import cats.syntax.flatMap._
 
 case class DefaultLocalhostMetadataRef[F[_]: Async](
@@ -12,12 +13,6 @@ case class DefaultLocalhostMetadataRef[F[_]: Async](
 
   override def get: F[LocalhostMetadata] = cell.get
   override def modify(newLocalhostMetadata: LocalhostMetadata): F[Unit] =
-    cell
-      .evalModify(currentLocalhostMetadata =>
-        Async[F].delay {
-          (currentLocalhostMetadata, newLocalhostMetadata)
-        }
-      )
-      .flatMap(_ => Async[F].unit)
+    cell.update(_ => newLocalhostMetadata).flatMap(_ => Async[F].unit)
 
 }

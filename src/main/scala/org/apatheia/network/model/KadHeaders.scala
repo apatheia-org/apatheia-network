@@ -19,9 +19,11 @@ object KadHeaders extends PackageDataParser[KadHeaders] {
   override def parse(
       byteArray: Array[Byte]
   ): Either[PackageDataParsingError, KadHeaders] = for {
-    from <- NodeId.parse(byteArray.take(NodeId.MAX_BYTESIZE))
-    to <- NodeId.parse(byteArray.drop(NodeId.MAX_BYTESIZE))
-    opId <- OpId.parse(byteArray.drop(2 * NodeId.MAX_BYTESIZE))
+    from <- NodeId.parse(byteArray.take(NodeId.BYTESIZE))
+    to <- NodeId.parse(byteArray.drop(NodeId.BYTESIZE).take(NodeId.BYTESIZE))
+    opId <- OpId.parse(
+      byteArray.drop(2 * NodeId.BYTESIZE).take(OpId.BYTESIZE)
+    )
   } yield (KadHeaders(from, to, opId))
 
   def byteSize =

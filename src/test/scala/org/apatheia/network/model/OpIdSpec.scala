@@ -8,16 +8,18 @@ import java.nio.ByteBuffer
 
 class OpIdSpec extends AnyFlatSpec with Matchers with EitherValues {
 
-  "parse" should "return a valid OpId from a 16-byte array" in {
+  "parse()" should "return a valid OpId from a 16-byte array" in {
     val uuid = UUID.randomUUID()
     val byteArray = ByteBuffer
-      .wrap(new Array[Byte](16))
+      .wrap(new Array[Byte](OpId.BYTESIZE))
       .putLong(uuid.getMostSignificantBits())
       .putLong(uuid.getLeastSignificantBits())
       .array()
     val opId = OpId.parse(byteArray)
+
     opId.isRight shouldBe true
     opId.value.value shouldBe uuid
+    opId.value.toByteArray shouldBe byteArray
   }
 
   it should "return a PackageDataParsingError if the array is not 16 bytes long" in {

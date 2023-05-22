@@ -1,4 +1,4 @@
-package org.apatheia.network.meta
+package org.apatheia.network.model
 
 import org.apatheia.model.Contact
 
