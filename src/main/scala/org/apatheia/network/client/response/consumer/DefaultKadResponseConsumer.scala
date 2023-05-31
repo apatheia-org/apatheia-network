@@ -1,16 +1,19 @@
 package org.apatheia.network.client.response.consumer
 
 import cats.effect.kernel.Async
-import org.apatheia.network.client.response.store.ResponseStoreRef
-import org.apatheia.network.model.{KadResponsePackage, OpId}
-import scala.concurrent.duration._
 import cats.implicits._
-import java.time.LocalDateTime
 import cats.instances.duration
-import java.time.temporal.TemporalUnit
-import java.time.temporal.ChronoUnit
+import org.apatheia.network.client.response.store.ResponseStoreRef
+import org.apatheia.network.model.KadResponsePackage
+import org.apatheia.network.model.OpId
 import org.typelevel.log4cats.slf4j.Slf4jLogger
+
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalDateTime.now
+import java.time.temporal.ChronoUnit
+import java.time.temporal.TemporalUnit
+import scala.concurrent.duration._
 
 final case class DefaultKadResponseConsumer[F[_]: Async](
     responseKeyStore: ResponseStoreRef[F]
@@ -29,7 +32,7 @@ final case class DefaultKadResponseConsumer[F[_]: Async](
       retry <-
         if (response.isDefined) {
           Async[F].pure(response)
-        } else if (timeLimit.isAfter(LocalDateTime.now())) {
+        } else if (timeLimit.isAfter(now())) {
           retryConsumeResponse(opId, timeLimit)(f2, f1 + f2)
         } else {
           logger
@@ -47,7 +50,7 @@ final case class DefaultKadResponseConsumer[F[_]: Async](
   ): F[Option[KadResponsePackage]] =
     retryConsumeResponse(
       opId,
-      LocalDateTime.now().plus(timeout.toMillis, ChronoUnit.MILLIS)
+      now().plus(timeout.toMillis, ChronoUnit.MILLIS)
     )()
 
 }

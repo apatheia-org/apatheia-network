@@ -61,21 +61,32 @@ final case class DefaultFindNodeClient[F[_]: Async](
       remote: Contact,
       target: NodeId
   ): F[KadDatagramPackage] =
-    defaultLocalhostMetadataRef.get.flatMap(locahostMetadata =>
-      Async[F].pure {
-        KadDatagramPackage(
-          headers = KadHeaders(
-            from = locahostMetadata.localContact.nodeId,
-            to = remote.nodeId,
-            opId = OpId.random
-          ),
-          payload = KadDatagramPayload(
-            command = KadCommand.FindNode,
-            data = target.toByteArray
-          )
+    defaultLocalhostMetadataRef.get.map(locahostMetadata =>
+      KadDatagramPackage(
+        headers = KadHeaders(
+          from = locahostMetadata.localContact.nodeId,
+          to = remote.nodeId,
+          opId = OpId.random
+        ),
+        payload = KadDatagramPayload(
+          command = KadCommand.FindNode,
+          data = target.toByteArray
         )
-      }
+      )
     )
+
+  private def toContacts(
+      responsePackage: Option[KadResponsePackage]
+  ): F[Either[PackageDataParsingError, List[Contact]]] =
+    responsePackage
+      .map(responsePkg =>
+        if (responsePkg.payload.command != KadCommand.FindNode) {
+          raiseUnexpectedCommandError(responsePkg.headers.opId)
+        } else {
+          parsePayloadDataToContacts(responsePkg)
+        }
+      )
+      .getOrElse(Async[F].pure(Right(List.empty)))
 
   private def raiseUnexpectedCommandError(
       opId: OpId
@@ -97,54 +108,49 @@ final case class DefaultFindNodeClient[F[_]: Async](
         CONTACT_TAG.getBytes(StandardCharsets.UTF_8),
         payloadData
       )
-
-    // slice the contacts using the indexes
-    val result = indexes
-      .sliding(2, 1)
-      .map(pairSeq => {
-        pairSeq match {
-          case Seq(x)    => Contact.parse(payloadData.slice(x, 0))
-          case Seq(x, y) => Contact.parse(payloadData.slice(x, y))
-        }
-      })
-
-    // collect the errors
-    val errors: Iterator[PackageDataParsingError] = result
-      .flatMap(_ match {
-        case Left(error) => List(error)
-        case _           => List()
-      })
+    val result: Iterator[Either[PackageDataParsingError, Contact]] =
+      slideContactsByIndexes(indexes, payloadData)
+    val errors: Iterator[PackageDataParsingError] = collectErrors(result)
 
     // compute final response result
-    val finalResult: Either[PackageDataParsingError, List[Contact]] =
-      if (errors.isEmpty) {
-        Right(result.toList.flatMap(_ match {
-          case Right(contact) => List(contact)
-          case _              => List()
-        }))
-      } else {
-        Left(
-          PackageDataParsingError(
-            s"Error while parsing response contacts:\n\n ${errors.map(_.message).mkString("\n")}"
-          )
-        )
-      }
-
-    Async[F].pure(finalResult)
+    Async[F].pure(toContactsResponse(result, errors))
   }
 
-  private def toContacts(
-      responsePackage: Option[KadResponsePackage]
-  ): F[Either[PackageDataParsingError, List[Contact]]] =
-    responsePackage
-      .map(responsePkg =>
-        if (responsePkg.payload.command != KadCommand.FindNode) {
-          raiseUnexpectedCommandError(responsePkg.headers.opId)
-        } else {
-          parsePayloadDataToContacts(responsePkg)
-        }
+  private def toContactsResponse(
+      result: Iterator[Either[PackageDataParsingError, Contact]],
+      errors: Iterator[PackageDataParsingError]
+  ): Either[PackageDataParsingError, List[Contact]] = if (errors.isEmpty) {
+    Right(result.toList.flatMap(_ match {
+      case Right(contact) => List(contact)
+      case _              => List()
+    }))
+  } else {
+    Left(
+      PackageDataParsingError(
+        s"Error while parsing response contacts:\n\n ${errors.map(_.message).mkString("\n")}"
       )
-      .getOrElse(Async[F].pure(Right(List.empty)))
+    )
+  }
+
+  private def collectErrors(
+      result: Iterator[Either[PackageDataParsingError, Contact]]
+  ): Iterator[PackageDataParsingError] = result
+    .flatMap(_ match {
+      case Left(error) => List(error)
+      case _           => List()
+    })
+
+  private def slideContactsByIndexes(
+      indexes: Seq[Int],
+      payloadData: Array[Byte]
+  ): Iterator[Either[PackageDataParsingError, Contact]] = indexes
+    .sliding(2, 1)
+    .map(pairSeq => {
+      pairSeq match {
+        case Seq(x)    => Contact.parse(payloadData.slice(x, 0))
+        case Seq(x, y) => Contact.parse(payloadData.slice(x, y))
+      }
+    })
 
   private def findPatternIndexes(
       pattern: Array[Byte],
