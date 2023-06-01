@@ -7,11 +7,11 @@ lazy val root = (project in file(".")).settings(
   libraryDependencies ++= Seq(
     // "core" module - IO, IOApp, schedulers
     // This pulls in the kernel and std modules automatically.
-    "org.typelevel" %% "cats-effect" % "3.3.12",
+    "org.typelevel" %% "cats-effect" % "3.4.8",
     // concurrency abstractions and primitives (Concurrent, Sync, Async etc.)
-    "org.typelevel" %% "cats-effect-kernel" % "3.3.12",
+    "org.typelevel" %% "cats-effect-kernel" % "3.4.8",
     // standard "effect" library (Queues, Console, Random etc.)
-    "org.typelevel" %% "cats-effect-std" % "3.3.12",
+    "org.typelevel" %% "cats-effect-std" % "3.4.8",
 
     // log4cats+logback
     "org.typelevel" %% "log4cats-core" % "2.5.0",
@@ -22,7 +22,7 @@ lazy val root = (project in file(".")).settings(
     "org.apache.mina" % "mina-core" % "2.2.1",
 
     // apatheia protocol
-    "org.apatheia" %% "apatheia-p2p-protocol" % "0.0.2-alpha",
+    "org.apatheia" %% "apatheia-p2p-protocol" % "0.0.9-alpha",
 
     // better monadic for compiler plugin as suggested by documentation
     compilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),

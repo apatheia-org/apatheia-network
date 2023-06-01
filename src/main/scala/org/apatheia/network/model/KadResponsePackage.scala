@@ -1,7 +1,30 @@
 package org.apatheia.network.model
 
+import org.apatheia.model.PackageData
+import org.apatheia.model.PackageDataParser
+import org.apatheia.error.PackageDataParsingError
+import org.apatheia.network.model.UDPDatagramParser
+import org.apatheia.network.error.UDPDatagramParsingError
+import cats.implicits._
+
 final case class KadResponsePackage(
     headers: KadHeaders,
-    payload: Option[KadResponsePayload],
+    payload: KadResponsePayload,
     udpDatagram: UDPDatagram
-)
+) extends UDPPackageData {
+  override def toByteArray: Array[Byte] =
+    Array.concat(headers.toByteArray, payload.toByteArray)
+}
+
+object KadResponsePackage extends UDPDatagramParser[KadResponsePackage] {
+
+  override def parse(
+      udpDatagram: UDPDatagram
+  ): Either[PackageDataParsingError, KadResponsePackage] = for {
+    headers <- KadHeaders.parse(udpDatagram.data.take(KadHeaders.byteSize))
+    payload <- KadResponsePayload.parse(
+      udpDatagram.data.drop(KadHeaders.byteSize)
+    )
+  } yield (KadResponsePackage(headers, payload, udpDatagram))
+
+}
