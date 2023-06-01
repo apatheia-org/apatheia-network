@@ -18,6 +18,7 @@ import java.net.InetSocketAddress
 import java.nio.charset.StandardCharsets
 import org.apatheia.error.PackageDataParsingError
 import org.typelevel.log4cats.slf4j.Slf4jLogger
+import org.apatheia.network.model.tags.ContactTag
 
 final case class DefaultFindNodeClient[F[_]: Async](
     kadResponseConsumer: KadResponseConsumer[F],
@@ -26,7 +27,6 @@ final case class DefaultFindNodeClient[F[_]: Async](
     defaultLocalhostMetadataRef: DefaultLocalhostMetadataRef[F]
 ) extends FindNodeClient[F] {
 
-  private val CONTACT_TAG: String = "[CONTACT]"
   private val logger = Slf4jLogger.getLogger[F]
 
   override def requestContacts(
@@ -105,7 +105,7 @@ final case class DefaultFindNodeClient[F[_]: Async](
     val payloadData: Array[Byte] = response.payload.data
     val indexes: Seq[Int] =
       findPatternIndexes(
-        CONTACT_TAG.getBytes(StandardCharsets.UTF_8),
+        ContactTag.tagData,
         payloadData
       )
     val result: Iterator[Either[PackageDataParsingError, Contact]] =

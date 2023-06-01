@@ -46,7 +46,7 @@ class KadResponseDatagramReceiverSpec
     val result = resultEffect.unsafeRunSync()
 
     result.value.headers shouldBe responsePackage.headers
-    result.value.payload shouldBe responsePackage.payload
+    result.value.toByteArray shouldBe responsePackage.toByteArray
   }
 
   trait TestContext {
