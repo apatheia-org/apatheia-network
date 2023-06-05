@@ -10,6 +10,7 @@ import cats.effect.std.AtomicCell
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import org.apatheia.model.RoutingTable
+import org.apatheia.network.model.ServerPort
 
 class LocalhostMetadataRefSpec extends AnyFlatSpec with Matchers {
 
@@ -51,7 +52,9 @@ class LocalhostMetadataRefSpec extends AnyFlatSpec with Matchers {
         port = 1000,
         ip = "0.0.0.0"
       ),
-      routingTable = RoutingTable(NodeId(1), List.empty, 20)
+      routingTable = RoutingTable(NodeId(1), List.empty, 20),
+      serverPort = ServerPort(2000),
+      responseServerPort = ServerPort(3000)
     )
 
     val updatedLocalhostMetadata = localhostMetadata.copy(

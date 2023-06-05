@@ -19,12 +19,14 @@ import java.nio.charset.StandardCharsets
 import org.apatheia.error.PackageDataParsingError
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 import org.apatheia.network.model.tags.ContactTag
+import org.apatheia.network.meta.LocalhostMetadataRef
+import cats.effect.kernel.Sync
 
-final case class DefaultFindNodeClient[F[_]: Async](
+final case class DefaultFindNodeClient[F[_]: Sync](
     kadResponseConsumer: KadResponseConsumer[F],
     responseTimeout: Duration,
     udpClient: UDPClient[F],
-    defaultLocalhostMetadataRef: DefaultLocalhostMetadataRef[F]
+    defaultLocalhostMetadataRef: LocalhostMetadataRef[F]
 ) extends FindNodeClient[F] {
 
   private val logger = Slf4jLogger.getLogger[F]
@@ -51,8 +53,8 @@ final case class DefaultFindNodeClient[F[_]: Async](
     contactsResponse.flatMap {
       _ match {
         case Left(error) =>
-          logger.error(error.message) *> Async[F].pure(List.empty)
-        case Right(contacts) => Async[F].pure(contacts)
+          logger.error(error.message) *> Sync[F].pure(List.empty)
+        case Right(contacts) => Sync[F].pure(contacts)
       }
     }
   }
@@ -66,7 +68,8 @@ final case class DefaultFindNodeClient[F[_]: Async](
         headers = KadHeaders(
           from = locahostMetadata.localContact.nodeId,
           to = remote.nodeId,
-          opId = OpId.random
+          opId = OpId.random,
+          responseServerPort = Some(locahostMetadata.responseServerPort)
         ),
         payload = KadDatagramPayload(
           command = KadCommand.FindNode,
@@ -86,11 +89,11 @@ final case class DefaultFindNodeClient[F[_]: Async](
           parsePayloadDataToContacts(responsePkg)
         }
       )
-      .getOrElse(Async[F].pure(Right(List.empty)))
+      .getOrElse(Sync[F].pure(Right(List.empty)))
 
   private def raiseUnexpectedCommandError(
       opId: OpId
-  ): F[Either[PackageDataParsingError, List[Contact]]] = Async[F].pure(
+  ): F[Either[PackageDataParsingError, List[Contact]]] = Sync[F].pure(
     Left(
       PackageDataParsingError(
         s"Unexpected Command for Op(${opId.value})"
@@ -108,21 +111,32 @@ final case class DefaultFindNodeClient[F[_]: Async](
         ContactTag.tagData,
         payloadData
       )
-    val result: Iterator[Either[PackageDataParsingError, Contact]] =
-      slideContactsByIndexes(indexes, payloadData)
-    val errors: Iterator[PackageDataParsingError] = collectErrors(result)
+    val result: List[Either[PackageDataParsingError, Contact]] =
+      slideContactsByIndexes(indexes, payloadData).toList
+
+    val errors: List[PackageDataParsingError] = collectErrors(result)
 
     // compute final response result
-    Async[F].pure(toContactsResponse(result, errors))
+    Sync[F].pure(
+      toContactsResponse(
+        slideContactsByIndexes(indexes, payloadData).toList,
+        errors
+      )
+    )
   }
 
   private def toContactsResponse(
-      result: Iterator[Either[PackageDataParsingError, Contact]],
-      errors: Iterator[PackageDataParsingError]
+      result: List[Either[PackageDataParsingError, Contact]],
+      errors: List[PackageDataParsingError]
   ): Either[PackageDataParsingError, List[Contact]] = if (errors.isEmpty) {
-    Right(result.toList.flatMap(_ match {
-      case Right(contact) => List(contact)
-      case _              => List()
+    // weird gambiarra hunting arround
+    Right(result.flatMap(_ match {
+      case Right(contact) => {
+        List(contact)
+      }
+      case Left(e) => {
+        List()
+      }
     }))
   } else {
     Left(
@@ -133,8 +147,8 @@ final case class DefaultFindNodeClient[F[_]: Async](
   }
 
   private def collectErrors(
-      result: Iterator[Either[PackageDataParsingError, Contact]]
-  ): Iterator[PackageDataParsingError] = result
+      result: List[Either[PackageDataParsingError, Contact]]
+  ): List[PackageDataParsingError] = result
     .flatMap(_ match {
       case Left(error) => List(error)
       case _           => List()
@@ -143,14 +157,20 @@ final case class DefaultFindNodeClient[F[_]: Async](
   private def slideContactsByIndexes(
       indexes: Seq[Int],
       payloadData: Array[Byte]
-  ): Iterator[Either[PackageDataParsingError, Contact]] = indexes
-    .sliding(2, 1)
-    .map(pairSeq => {
-      pairSeq match {
-        case Seq(x)    => Contact.parse(payloadData.slice(x, 0))
-        case Seq(x, y) => Contact.parse(payloadData.slice(x, y))
-      }
-    })
+  ): Iterator[Either[PackageDataParsingError, Contact]] = {
+    indexes
+      .sliding(2, 1)
+      .map(pairSeq => {
+        pairSeq match {
+          case Seq(x) => {
+            Contact.parse(payloadData.drop(x))
+          }
+          case Seq(x, y) => {
+            Contact.parse(payloadData.slice(x, y))
+          }
+        }
+      })
+  }
 
   private def findPatternIndexes(
       pattern: Array[Byte],
@@ -165,11 +185,15 @@ final case class DefaultFindNodeClient[F[_]: Async](
       val maxStartIndex = dataLength - patternLength
       val patternStartByte = pattern(0)
 
-      (0 to maxStartIndex).filter { i =>
-        data(i) == patternStartByte && pattern.indices.forall(j =>
-          data(i + j) == pattern(j)
-        )
-      }
+      (0 to maxStartIndex)
+        .filter { i =>
+          data(i) == patternStartByte && pattern.indices.forall(j =>
+            data(i + j) == pattern(j)
+          )
+        }
+        .map(
+          _ + ContactTag.tagData.size
+        ) // gambiarra with potential of improvements
     }
   }
 

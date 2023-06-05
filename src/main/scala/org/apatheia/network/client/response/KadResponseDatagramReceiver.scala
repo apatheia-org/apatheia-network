@@ -9,6 +9,7 @@ import org.typelevel.log4cats.slf4j.Slf4jLogger
 import org.apatheia.network.model.KadDatagramPackage
 import org.apatheia.network.model.KadCommand.FindNode
 import org.apatheia.algorithm.findnode.pub.FindNodeAlgorithm
+import cats.implicits._
 
 final case class KadResponseDatagramReceiver[F[_]: Async](
     responseKeyStore: ResponseStoreRef[F]
@@ -20,8 +21,9 @@ final case class KadResponseDatagramReceiver[F[_]: Async](
     responseKeyStore.store(kadPackage.headers.opId, kadPackage)
 
   override def onUDPDatagramReceived(udpDatagram: UDPDatagram): F[Unit] =
-    KadResponsePackage.parse(udpDatagram) match {
-      case Right(kadPackage) => processPackage(kadPackage)
-      case Left(error)       => logger.error(error.message)
-    }
+    logger.debug(s"Receiving response datagram: ${udpDatagram.from}") *>
+      (KadResponsePackage.parse(udpDatagram) match {
+        case Right(kadPackage) => processPackage(kadPackage)
+        case Left(error)       => logger.error(error.message)
+      })
 }

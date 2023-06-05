@@ -21,6 +21,7 @@ import org.apatheia.network.model.KadResponsePackage
 import org.apatheia.network.model.KadDatagramPayload
 import org.apatheia.network.model.KadCommand
 import org.apatheia.network.model.KadResponsePayload
+import org.apatheia.network.model.ServerPort
 
 case class FindNodeServerProcessor[F[_]: Async](
     localhostMetadataRef: LocalhostMetadataRef[F],
@@ -82,7 +83,11 @@ case class FindNodeServerProcessor[F[_]: Async](
     // TODO improve shitty circular design
     udpDatagram = UDPDatagram(
       from = localhostMetadata.from,
-      to = udpDatagram.from,
+      to = new InetSocketAddress(
+        // gambiarra temporaria
+        udpDatagram.from.getHostName(),
+        kadDatagram.headers.responseServerPort.getOrElse(ServerPort(0)).value
+      ),
       Array.empty
     )
   )
@@ -98,14 +103,15 @@ case class FindNodeServerProcessor[F[_]: Async](
         .toArray
         .flatten
     }
+    kadResponsePackage = enrichWithMetadata(
+      contactsData,
+      kadDatagram,
+      localhostMetadata,
+      udpDatagram
+    )
     result <- requestServerClient.send(
-      targetAddress = udpDatagram.from,
-      data = enrichWithMetadata(
-        contactsData,
-        kadDatagram,
-        localhostMetadata,
-        udpDatagram
-      ).toByteArray
+      targetAddress = kadResponsePackage.udpDatagram.to,
+      data = kadResponsePackage.toByteArray
     )
   } yield ()
 

@@ -11,8 +11,9 @@ import org.typelevel.log4cats.slf4j.Slf4jLogger
 import org.apatheia.network.meta.LocalhostMetadataRef
 import org.apatheia.network.client.UDPClient
 import org.apatheia.algorithm.findnode.sub.DefaultFindNodeSubscriberAlgorithm
+import cats.implicits._
 
-class DefaultKademliaDatagramServerReceiver[F[_]: Async](
+case class DefaultKademliaDatagramServerReceiver[F[_]: Async](
     localhostMetadataRef: LocalhostMetadataRef[F],
     requestServerClient: UDPClient[F]
 ) extends UDPDatagramReceiver[F] {
@@ -28,19 +29,25 @@ class DefaultKademliaDatagramServerReceiver[F[_]: Async](
     )
 
   override def onUDPDatagramReceived(udpDatagram: UDPDatagram): F[Unit] =
-    KadDatagramPackage.parse(udpDatagram) match {
-      case Left(e) =>
-        logger.error(s"Error while parsing UDP Datagram(${udpDatagram.from
-            .getHostName()}:${udpDatagram.from.getPort()}): ${e.message}")
-      case Right(kadPackage) =>
-        processorsMap
-          .get(kadPackage.payload.command)
-          .map(_.process(kadPackage, udpDatagram))
-          .getOrElse(
-            logger.warn(
-              s"No command found for Kad Datagram(${kadPackage.headers})"
-            )
-          )
-    }
+    for {
+      _ <- logger.debug(
+        s"Processing incoming Kademlia UDP datagram: ${udpDatagram.from}"
+      )
+      result <- KadDatagramPackage.parse(udpDatagram) match {
+        case Left(e) =>
+          logger.error(s"Error while parsing UDP Datagram(${udpDatagram.from
+              .getHostName()}:${udpDatagram.from.getPort()}): ${e.message}")
+        case Right(kadPackage) =>
+          logger.debug(s"Parsed kademlia package: ${kadPackage}") *>
+            processorsMap
+              .get(kadPackage.payload.command)
+              .map(_.process(kadPackage, udpDatagram))
+              .getOrElse(
+                logger.warn(
+                  s"No command found for Kad Datagram(${kadPackage.headers})"
+                )
+              )
+      }
+    } yield (result)
 
 }

@@ -6,7 +6,9 @@ import java.net.InetSocketAddress
 
 case class LocalhostMetadata(
     localContact: Contact,
-    routingTable: RoutingTable
+    routingTable: RoutingTable,
+    serverPort: ServerPort,
+    responseServerPort: ServerPort
 ) {
   final val from: InetSocketAddress =
     new InetSocketAddress(localContact.ip, localContact.port)

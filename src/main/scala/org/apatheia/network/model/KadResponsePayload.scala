@@ -14,7 +14,11 @@ final case class KadResponsePayload(command: KadCommand, data: Array[Byte])
 object KadResponsePayload extends PackageDataParser[KadResponsePayload] {
   override def parse(
       byteArray: Array[Byte]
-  ): Either[PackageDataParsingError, KadResponsePayload] = KadCommand
-    .parse(byteArray.take(1))
-    .flatMap(command => Right(KadResponsePayload(command, byteArray.drop(1))))
+  ): Either[PackageDataParsingError, KadResponsePayload] =
+    KadCommand
+      .parse(byteArray.take(1))
+      .flatMap(command => {
+        Right(KadResponsePayload(command, byteArray.drop(1)))
+      })
+
 }
