@@ -1,6 +1,7 @@
 package org.apatheia.server.impl
 
 import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.must.Matchers
 import org.apatheia.network.server.impl.DefaultKademliaDatagramServerReceiver
 import org.apatheia.model.Contact
 import org.apatheia.network.model.LocalhostMetadata
@@ -32,7 +33,6 @@ import cats.effect.kernel.Async
 import java.net.InetAddress
 import java.net.Inet4Address
 import java.net.InetSocketAddress
-import org.scalatest.matchers.should.Matchers
 
 class FindNodeIntegrationSpec extends AnyFlatSpec with Matchers {
 

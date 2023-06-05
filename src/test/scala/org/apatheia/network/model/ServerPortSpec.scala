@@ -4,7 +4,6 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.apatheia.network.model.ServerPort
 import org.apatheia.error.PackageDataParsingError
-import java.nio.ByteBuffer
 
 class ServerPortSpec extends AnyWordSpec with Matchers {
 
