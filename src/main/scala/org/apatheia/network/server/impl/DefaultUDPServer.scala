@@ -13,6 +13,7 @@ import org.apache.mina.core.buffer.IoBuffer
 import org.apatheia.network.model.UDPDatagram
 import org.apatheia.network.server.UDPServer
 import org.apatheia.network.server.UDPDatagramReceiver
+import org.typelevel.log4cats.slf4j.Slf4jLogger
 
 final case class DefaultUDPServer[F[_]: Async](
     serverPort: ServerPort,
@@ -21,13 +22,15 @@ final case class DefaultUDPServer[F[_]: Async](
     extends UDPServer[F] {
 
   private val acceptor = new NioDatagramAcceptor()
+  private val logger = Slf4jLogger.getLogger[F]
 
   override def run(): F[Unit] =
     for {
-      handler <- Async[F].delay(
-        UDPServerHandlerAdapter(receiver)
+      _ <- logger.info(s"Starging up server at port ${serverPort.value}")
+      handler <- Async[F].pure(
+        UDPServerHandlerAdapter(receiver, acceptor)
       )
-      config <- Async[F].delay {
+      config <- Async[F].pure {
         val config =
           acceptor.getSessionConfig.asInstanceOf[DatagramSessionConfig]
         config.setReuseAddress(true)
@@ -35,10 +38,15 @@ final case class DefaultUDPServer[F[_]: Async](
         config.setReceiveBufferSize(65536)
         config
       }
-      _ <- Async[F].delay {
+      _ <- Async[F].pure {
         acceptor.setHandler(handler)
-        acceptor.bind(new InetSocketAddress(serverPort.value))
+        acceptor.bind(new InetSocketAddress("127.0.0.1", serverPort.value))
+        // acceptor.bind()
       }
+      _ <- logger.info(
+        s"UDP Server receiving datagrams at port ${serverPort.value}"
+      )
+
     } yield ()
 
   override def stop(): F[Unit] = Async[F].delay {

@@ -21,9 +21,11 @@ object KadResponsePackage extends UDPDatagramParser[KadResponsePackage] {
   override def parse(
       udpDatagram: UDPDatagram
   ): Either[PackageDataParsingError, KadResponsePackage] = for {
-    headers <- KadHeaders.parse(udpDatagram.data.take(KadHeaders.byteSize))
+    headers <- KadHeaders.parse(
+      udpDatagram.data.take(KadHeaders.partialByteSize)
+    )
     payload <- KadResponsePayload.parse(
-      udpDatagram.data.drop(KadHeaders.byteSize)
+      udpDatagram.data.drop(headers.byteSize)
     )
   } yield (KadResponsePackage(headers, payload, udpDatagram))
 

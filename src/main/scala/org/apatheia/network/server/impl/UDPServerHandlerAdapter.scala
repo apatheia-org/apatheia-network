@@ -15,9 +15,11 @@ import org.typelevel.log4cats.slf4j.Slf4jLogger
 import org.apatheia.network.server.UDPDatagramReceiver
 import org.apatheia.network.error.UDPServerError
 import org.slf4j
+import org.apache.mina.transport.socket.nio.NioDatagramAcceptor
 
 case class UDPServerHandlerAdapter[F[_]: Async](
-    receiver: UDPDatagramReceiver[F]
+    receiver: UDPDatagramReceiver[F],
+    acceptor: NioDatagramAcceptor
 )(implicit dispatcher: Dispatcher[F])
     extends IoHandlerAdapter {
 
@@ -56,6 +58,13 @@ case class UDPServerHandlerAdapter[F[_]: Async](
     UDPServerError.ExtractBufferError
   )
 
+  private def processDatagram(
+      udpDatagram: UDPDatagram
+  ): EitherT[F, UDPServerError, Unit] =
+    EitherT(receiver.onUDPDatagramReceived(udpDatagram).attempt).leftFlatMap(
+      e => EitherT.leftT(UDPServerError(e.getMessage()))
+    )
+
   private def receiveDatagram(
       localAddress: InetSocketAddress,
       senderAddress: InetSocketAddress,
@@ -69,7 +78,10 @@ case class UDPServerHandlerAdapter[F[_]: Async](
           data = data
         )
       )
-      _ <- EitherT.right(receiver.onUDPDatagramReceived(udpDatagram))
+      _ <- EitherT.right(
+        logger.debug(s"Receiving datagram: ${udpDatagram.from}. ${receiver}")
+      )
+      _ <- processDatagram(udpDatagram)
     } yield (udpDatagram)
   }
 
@@ -78,11 +90,16 @@ case class UDPServerHandlerAdapter[F[_]: Async](
 
   private def logSuccess(udpDatagram: UDPDatagram): F[Unit] =
     logger.debug(
-      s"UDP Datagram successfully received: ${udpDatagram.toString()}"
-    )
+      s"UDP Datagram successfully received: ${udpDatagram.from.toString()}"
+    ) *> Async[F].delay {
+      acceptor.dispose()
+    }
 
   override def messageReceived(session: IoSession, message: Object): Unit = {
     val receivedDatagram = (for {
+      _ <- EitherT.right(
+        logger.debug(s"Receiving new message")
+      )
       localAddress <- extractLocalAddress(session)
       senderAddress <- extractSenderAddress(session)
       data <- extractData(message)

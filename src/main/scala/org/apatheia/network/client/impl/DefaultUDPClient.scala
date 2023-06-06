@@ -17,21 +17,13 @@ import org.apatheia.network.model.MaxClientBufferSize
 import scala.util.Try
 import org.apatheia.network.model.MaxClientTimeout
 import cats.effect.kernel.Async
-import cats.effect.LiftIO
+// import cats.effect.LiftIO
 import org.apache.mina.core.future.CloseFuture
 
-final case class DefaultUDPClient[F[_]: Async: LiftIO](
+final case class DefaultUDPClient[F[_]: Async](
     maxBufferSize: MaxClientBufferSize,
     maxClientTimeout: MaxClientTimeout
 ) extends UDPClient[F] {
-
-  private val connector: IoConnector = new NioDatagramConnector()
-  connector.setHandler(UDPClientHandlerAdapter())
-  private val sessionConfig =
-    connector.getSessionConfig.asInstanceOf[DatagramSessionConfig]
-  sessionConfig.setBroadcast(true)
-  sessionConfig.setReuseAddress(true)
-  sessionConfig.setWriteTimeout(maxClientTimeout.value)
 
   private val logger = Slf4jLogger.getLogger[F]
 
@@ -41,9 +33,12 @@ final case class DefaultUDPClient[F[_]: Async: LiftIO](
       udpData: Array[Byte]
   ): F[UDPClient.UDPSendResult] =
     if (udpData.size > maxBufferSize.value) {
-      Async[F].pure(
-        Either.left(UDPClientError.MaxSizeError(targetAddress))
-      )
+      logger.debug(
+        s"Udp data size: ${udpData.size}. Max buffer size: ${maxBufferSize}"
+      ) *>
+        Async[F].pure(
+          Either.left(UDPClientError.MaxSizeError(targetAddress))
+        )
     } else if (future.isConnected()) {
       Async[F].delay {
         Try({
@@ -57,22 +52,47 @@ final case class DefaultUDPClient[F[_]: Async: LiftIO](
         )
       }
     } else {
-      Async[F].pure(
-        Either.left(UDPClientError.CannotConnectError(targetAddress))
-      )
+      logger.error(
+        s"Error while writing message: ${UDPClientError.CannotConnectError(targetAddress)}"
+      ) *>
+        Async[F].pure(
+          Either.left(UDPClientError.CannotConnectError(targetAddress))
+        )
     }
+
+  private def buildClientConnection(
+      targetAddress: InetSocketAddress
+  ): F[IoConnector] = Async[F].delay {
+    val connector: IoConnector = new NioDatagramConnector()
+    connector.setDefaultRemoteAddress(targetAddress)
+    connector.setHandler(UDPClientHandlerAdapter())
+    val sessionConfig =
+      connector.getSessionConfig.asInstanceOf[DatagramSessionConfig]
+    sessionConfig.setBroadcast(true)
+    sessionConfig.setReuseAddress(true)
+    sessionConfig.setWriteTimeout(maxClientTimeout.value)
+    connector
+  }
 
   override def send(
       targetAddress: InetSocketAddress,
       data: Array[Byte]
   ): F[UDPClient.UDPSendResult] = {
     for {
+      _ <- logger.debug(s"Sending UDP request to ${targetAddress}")
+      connector <- buildClientConnection(targetAddress)
       connectFuture <- Async[F].delay {
-        connector.connect(targetAddress)
+        connector.connect()
       }
+      _ <- logger.debug(s"Await for connection to ${targetAddress}")
       _ <- Async[F].delay { connectFuture.awaitUninterruptibly() }
       result <- writeBuffer(targetAddress, connectFuture, data)
-      _ <- Async[F].delay { connector.dispose() }
+      _ <- result match {
+        case Left(error) =>
+          logger.error(s"Error while writing the buffer: ${error}")
+        case Right(value) => Async[F].unit
+      }
+      _ <- Async[F].pure { connector.dispose() }
     } yield (result)
   }
 

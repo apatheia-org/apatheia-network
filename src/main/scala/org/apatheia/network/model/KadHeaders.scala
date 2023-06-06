@@ -8,11 +8,23 @@ import org.apatheia.error.PackageDataParsingError
 final case class KadHeaders(
     from: NodeId,
     to: NodeId,
-    opId: OpId
+    opId: OpId,
+    responseServerPort: Option[ServerPort] = None
 ) extends PackageData {
 
   override def toByteArray: Array[Byte] =
-    Array.concat(from.toByteArray, to.toByteArray, opId.toByteArray)
+    Array.concat(
+      from.toByteArray,
+      to.toByteArray,
+      opId.toByteArray,
+      responseServerPort.map(_.toByteArray).getOrElse(Array.empty)
+    )
+
+  val byteSize: Int =
+    responseServerPort
+      .map(_ => KadHeaders.fullByteSize)
+      .getOrElse(KadHeaders.partialByteSize)
+
 }
 
 object KadHeaders extends PackageDataParser[KadHeaders] {
@@ -24,9 +36,23 @@ object KadHeaders extends PackageDataParser[KadHeaders] {
     opId <- OpId.parse(
       byteArray.drop(2 * NodeId.BYTESIZE).take(OpId.BYTESIZE)
     )
-  } yield (KadHeaders(from, to, opId))
+    responseServerPort <-
+      if (byteArray.size > partialByteSize) {
+        ServerPort
+          .parse(
+            byteArray
+              .drop(2 * NodeId.BYTESIZE + OpId.BYTESIZE)
+              .take(ServerPort.BYTESIZE)
+          )
+          .map(Some.apply)
+      } else { Right(None) }
 
-  def byteSize =
-    20 + 20 + 16 // 20(20 * 8) + 20(20 * 8) + 16(16 * 8) = 56(448 bits)
+  } yield (KadHeaders(from, to, opId, responseServerPort))
+
+  val partialByteSize: Int =
+    NodeId.BYTESIZE + NodeId.BYTESIZE + OpId.BYTESIZE
+
+  val fullByteSize: Int =
+    NodeId.BYTESIZE + NodeId.BYTESIZE + OpId.BYTESIZE + ServerPort.BYTESIZE
 
 }
