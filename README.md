@@ -9,4 +9,4 @@ The server and client layers are implemented using the MINA framework, which pro
 The implementation is made in Scala, anyway.
 
 ## License
-This project is licensed under the MIT License. See the LICENSE file for details.
+This project is licensed under the MIT License. See the [LICENSE file](LICENSE.MD) for details.
