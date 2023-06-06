@@ -4,6 +4,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.apatheia.network.model.ServerPort
 import org.apatheia.error.PackageDataParsingError
+import java.nio.ByteBuffer
 
 class ServerPortSpec extends AnyWordSpec with Matchers {
 
@@ -12,7 +13,7 @@ class ServerPortSpec extends AnyWordSpec with Matchers {
     "be parsed correctly from a byte array" in {
       val portValue: Int = 8080
       val byteArray: Array[Byte] =
-        Array(0, 0, 31, -48) // Equivalent to 8080 in little-endian byte order
+        ByteBuffer.allocate(ServerPort.BYTESIZE).putInt(portValue).array()
 
       val result = ServerPort.parse(byteArray)
 
