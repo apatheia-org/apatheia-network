@@ -1,6 +1,5 @@
 package org.apatheia.algorithm.findnode
 
-import cats.effect.kernel.Async
 import org.apatheia.model.Contact
 import org.apatheia.network.client.response.consumer.KadResponseConsumer
 import org.apatheia.network.model.OpId
@@ -8,14 +7,12 @@ import scala.concurrent.duration.Duration
 import org.apatheia.network.model.KadResponsePackage
 import org.apatheia.network.client.UDPClient
 import org.apatheia.network.model.KadHeaders
-import org.apatheia.network.meta.DefaultLocalhostMetadataRef
 import org.apatheia.network.model.KadDatagramPackage
 import org.apatheia.network.model.KadDatagramPayload
 import org.apatheia.network.model.KadCommand
 import org.apatheia.model.NodeId
 import cats.implicits._
 import java.net.InetSocketAddress
-import java.nio.charset.StandardCharsets
 import org.apatheia.error.PackageDataParsingError
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 import org.apatheia.network.model.tags.ContactTag

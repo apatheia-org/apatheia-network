@@ -1,11 +1,7 @@
 package org.apatheia.network.model
 
-import org.apatheia.model.PackageData
-import org.apatheia.model.PackageDataParser
 import org.apatheia.error.PackageDataParsingError
 import org.apatheia.network.model.UDPDatagramParser
-import org.apatheia.network.error.UDPDatagramParsingError
-import cats.implicits._
 
 final case class KadResponsePackage(
     headers: KadHeaders,

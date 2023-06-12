@@ -6,9 +6,6 @@ import org.apatheia.network.model.UDPDatagram
 import org.apatheia.network.model.KadResponsePackage
 import org.apatheia.network.client.response.store.ResponseStoreRef
 import org.typelevel.log4cats.slf4j.Slf4jLogger
-import org.apatheia.network.model.KadDatagramPackage
-import org.apatheia.network.model.KadCommand.FindNode
-import org.apatheia.algorithm.findnode.pub.FindNodeAlgorithm
 import cats.implicits._
 
 final case class KadResponseDatagramReceiver[F[_]: Async](

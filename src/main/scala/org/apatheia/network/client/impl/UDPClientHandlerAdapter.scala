@@ -2,11 +2,6 @@ package org.apatheia.network.client.impl
 
 import org.apache.mina.core.service.IoHandlerAdapter
 import org.apache.mina.core.session.IoSession
-import org.typelevel.log4cats.Logger
-import org.typelevel.log4cats.LoggerFactory
-import cats.effect.std.Dispatcher
-import org.typelevel.log4cats.slf4j.Slf4jLogger
-import cats.effect.kernel.Sync
 import org.slf4j
 
 final case class UDPClientHandlerAdapter() extends IoHandlerAdapter {

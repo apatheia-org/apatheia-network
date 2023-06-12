@@ -1,8 +1,6 @@
 package org.apatheia.network.client
 
-import org.apatheia.network.model.UDPDatagram
 import java.net.InetSocketAddress
-import org.apatheia.network.model.ServerPort
 import org.apatheia.network.error.UDPClientError
 
 trait UDPClient[F[_]] {

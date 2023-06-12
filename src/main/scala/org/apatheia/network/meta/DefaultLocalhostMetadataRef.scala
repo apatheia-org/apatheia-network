@@ -2,8 +2,6 @@ package org.apatheia.network.meta
 
 import cats.effect.std.AtomicCell
 import cats.effect.kernel.Async
-import org.apatheia.network.model.OpId
-import org.apatheia.network.model.KadResponsePackage
 import org.apatheia.network.model.LocalhostMetadata
 import cats.syntax.flatMap._
 

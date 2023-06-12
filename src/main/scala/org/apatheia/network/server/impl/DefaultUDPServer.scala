@@ -7,10 +7,6 @@ import org.apache.mina.transport.socket.DatagramSessionConfig
 import java.net.InetSocketAddress
 import cats.implicits._
 import cats.effect.std.Dispatcher
-import org.apache.mina.core.service.IoHandlerAdapter
-import org.apache.mina.core.session.IoSession
-import org.apache.mina.core.buffer.IoBuffer
-import org.apatheia.network.model.UDPDatagram
 import org.apatheia.network.server.UDPServer
 import org.apatheia.network.server.UDPDatagramReceiver
 import org.typelevel.log4cats.slf4j.Slf4jLogger
