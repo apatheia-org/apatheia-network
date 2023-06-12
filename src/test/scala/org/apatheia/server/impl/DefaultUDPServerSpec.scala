@@ -14,8 +14,6 @@ import org.apatheia.network.model.MaxClientBufferSize
 import org.apatheia.network.model.MaxClientTimeout
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 import cats.effect.std.Dispatcher
-import cats.syntax.distributive
-import cats.effect.unsafe.IORuntime
 
 class DefaultUDPServerSpec extends AnyFlatSpec with Matchers {
 

@@ -3,9 +3,6 @@ package org.apatheia.client.impl
 import java.net.InetSocketAddress
 import cats.effect.IO
 import cats.implicits._
-import cats.effect.unsafe.implicits.global
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration._
 import cats.effect.unsafe.IORuntime
 import org.apatheia.network.client.impl.DefaultUDPClient
 import org.apatheia.network.model.MaxClientBufferSize
@@ -14,7 +11,6 @@ import org.apatheia.network.client.UDPClient
 import org.apatheia.network.error.UDPClientError
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.concurrent.ScalaFutures
 
 class DefaultUDPClientSpec extends AnyFlatSpec with Matchers {
   implicit val runtime: IORuntime = cats.effect.unsafe.implicits.global

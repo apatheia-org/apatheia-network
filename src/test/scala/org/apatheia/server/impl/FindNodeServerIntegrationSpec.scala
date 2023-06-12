@@ -1,7 +1,7 @@
 package org.apatheia.server.impl
 
 import org.scalatest.flatspec.AnyFlatSpec
-import org.scalatest.matchers.must.Matchers
+import org.scalatest.matchers.should.Matchers
 import org.apatheia.network.server.impl.DefaultKademliaDatagramServerReceiver
 import org.apatheia.model.Contact
 import org.apatheia.network.model.LocalhostMetadata
@@ -24,14 +24,10 @@ import org.apatheia.network.model.MaxClientBufferSize
 import org.apatheia.network.client.impl.DefaultUDPClient
 import org.apatheia.network.model.MaxClientTimeout
 import org.apatheia.network.client.response.consumer.DefaultKadResponseConsumer
-import org.apatheia.algorithm.findnode.FindNodeClient
 import org.apatheia.algorithm.findnode.DefaultFindNodeClient
 import scala.concurrent.duration._
 import cats.effect.unsafe.implicits.global
 import org.typelevel.log4cats.slf4j.Slf4jLogger
-import cats.effect.kernel.Async
-import java.net.InetAddress
-import java.net.Inet4Address
 import java.net.InetSocketAddress
 
 class FindNodeIntegrationSpec extends AnyFlatSpec with Matchers {
