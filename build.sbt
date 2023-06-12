@@ -32,7 +32,14 @@ lazy val root = (project in file(".")).settings(
     "org.scalatest" %% "scalatest" % "3.2.15" % "test",
     "org.scalatestplus" %% "mockito-4-6" % "3.2.15.0" % "test",
     "org.mockito" % "mockito-core" % "4.6.0" % "test"
-  )
+  ),
+  semanticdbCompilerPlugin := {
+    ("org.scalameta" % "semanticdb-scalac" % semanticdbVersion.value)
+      .cross(CrossVersion.full)
+  },
+  semanticdbEnabled := true, // enable SemanticDB
+  semanticdbVersion := scalafixSemanticdb.revision, // only required for Scala 2.x
+  scalacOptions += "-Wunused:imports" // Scala 2.x only, required by `RemoveUnused`,
 )
 
 // Resolver config

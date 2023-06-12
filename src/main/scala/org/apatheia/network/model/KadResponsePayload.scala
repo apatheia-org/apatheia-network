@@ -1,6 +1,5 @@
 package org.apatheia.network.model
 
-import org.apatheia.model.Contact
 import org.apatheia.model.PackageData
 import org.apatheia.model.PackageDataParser
 import org.apatheia.error.PackageDataParsingError

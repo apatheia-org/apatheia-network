@@ -4,7 +4,6 @@ import cats.effect.kernel.Async
 import org.apatheia.network.server.UDPDatagramReceiver
 import org.apatheia.network.model.UDPDatagram
 import org.apatheia.network.model.KadDatagramPackage
-import org.apatheia.network.model.KadCommand.FindNode
 import org.apatheia.network.model.KadCommand
 import org.apatheia.network.server.KademliaServerProcessor
 import org.typelevel.log4cats.slf4j.Slf4jLogger

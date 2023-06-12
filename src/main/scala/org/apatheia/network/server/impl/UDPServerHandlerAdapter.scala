@@ -14,7 +14,6 @@ import cats.effect.kernel.Async
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 import org.apatheia.network.server.UDPDatagramReceiver
 import org.apatheia.network.error.UDPServerError
-import org.slf4j
 import org.apache.mina.transport.socket.nio.NioDatagramAcceptor
 
 case class UDPServerHandlerAdapter[F[_]: Async](

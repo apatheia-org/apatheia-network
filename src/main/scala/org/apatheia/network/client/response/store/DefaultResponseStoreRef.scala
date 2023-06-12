@@ -2,10 +2,7 @@ package org.apatheia.network.client.response.store
 
 import cats.effect.kernel.Async
 import org.apatheia.network.model.{KadResponsePackage, OpId}
-import org.apatheia.store.ApatheiaKeyValueStore
-import scala.collection.immutable.HashMap
 import cats.effect.std.AtomicCell
-import cats.effect.kernel.Sync
 import cats.implicits._
 import org.apatheia.store.KeyValueStore
 

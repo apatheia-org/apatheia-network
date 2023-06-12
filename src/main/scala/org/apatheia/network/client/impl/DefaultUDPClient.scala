@@ -1,15 +1,12 @@
 package org.apatheia.network.client.impl
 
-import cats.effect.kernel.Temporal
 import org.apatheia.network.client.UDPClient
 import java.net.InetSocketAddress
-import org.apatheia.network.model.{ServerPort, UDPDatagram}
 import org.apache.mina.core.service.IoConnector
 import org.apache.mina.transport.socket.nio.NioDatagramConnector
 import org.apache.mina.transport.socket.DatagramSessionConfig
 import org.apache.mina.core.future.ConnectFuture
 import org.apache.mina.core.buffer.IoBuffer
-import java.nio.charset.StandardCharsets
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 import cats.implicits._
 import org.apatheia.network.error.UDPClientError
@@ -18,7 +15,6 @@ import scala.util.Try
 import org.apatheia.network.model.MaxClientTimeout
 import cats.effect.kernel.Async
 // import cats.effect.LiftIO
-import org.apache.mina.core.future.CloseFuture
 
 final case class DefaultUDPClient[F[_]: Async](
     maxBufferSize: MaxClientBufferSize,
