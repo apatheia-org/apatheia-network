@@ -11,7 +11,7 @@ class OpIdSpec extends AnyFlatSpec with Matchers with EitherValues {
   "parse()" should "return a valid OpId from a 16-byte array" in {
     val uuid = UUID.randomUUID()
     val byteArray = ByteBuffer
-      .wrap(new Array[Byte](OpId.BYTESIZE))
+      .wrap(new Array[Byte](OpId.byteSize))
       .putLong(uuid.getMostSignificantBits())
       .putLong(uuid.getLeastSignificantBits())
       .array()

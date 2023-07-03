@@ -13,7 +13,7 @@ class ServerPortSpec extends AnyWordSpec with Matchers {
     "be parsed correctly from a byte array" in {
       val portValue: Int = 8080
       val byteArray: Array[Byte] =
-        ByteBuffer.allocate(ServerPort.BYTESIZE).putInt(portValue).array()
+        ByteBuffer.allocate(ServerPort.byteSize).putInt(portValue).array()
 
       val result = ServerPort.parse(byteArray)
 

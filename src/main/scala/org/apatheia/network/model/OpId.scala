@@ -10,15 +10,15 @@ import scala.util.Try
 
 final case class OpId(value: UUID) extends PackageData {
   override def toByteArray: Array[Byte] = ByteBuffer
-    .wrap(new Array[Byte](OpId.BYTESIZE))
+    .wrap(new Array[Byte](OpId.byteSize))
     .putLong(value.getMostSignificantBits())
     .putLong(value.getLeastSignificantBits())
     .array()
 }
 
-object OpId extends PackageDataParser[OpId] {
+object OpId extends DefaultBytesizedParser[OpId] {
 
-  val BYTESIZE = 16
+  override val byteSize: Int = 16
 
   override def parse(
       byteArray: Array[Byte]
