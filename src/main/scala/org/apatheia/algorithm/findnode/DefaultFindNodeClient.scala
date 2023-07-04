@@ -6,7 +6,6 @@ import org.apatheia.network.model.OpId
 import scala.concurrent.duration.Duration
 import org.apatheia.network.model.KadResponsePackage
 import org.apatheia.network.client.UDPClient
-import org.apatheia.network.model.KadResponseHeaders
 import org.apatheia.network.model.KadDatagramPackage
 import org.apatheia.network.model.KadDatagramPayload
 import org.apatheia.network.model.KadCommand

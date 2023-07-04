@@ -4,7 +4,6 @@ import org.apatheia.model.NodeId
 import org.apatheia.model.PackageData
 import org.apatheia.error.PackageDataParsingError
 import org.apatheia.network.model.BytesizedPackageData._
-import org.apatheia.model.PackageDataParser
 
 final case class KadRequestHeaders(
     from: NodeId,

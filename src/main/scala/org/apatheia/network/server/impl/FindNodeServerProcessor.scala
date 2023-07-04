@@ -18,7 +18,6 @@ import cats.implicits._
 import org.apatheia.network.model.KadResponsePackage
 import org.apatheia.network.model.KadCommand
 import org.apatheia.network.model.KadResponsePayload
-import org.apatheia.network.model.ServerPort
 
 case class FindNodeServerProcessor[F[_]: Async](
     localhostMetadataRef: LocalhostMetadataRef[F],

@@ -3,7 +3,6 @@ package org.apatheia.network.model
 import java.util.UUID
 import org.apatheia.model.PackageData
 import java.nio.ByteBuffer
-import org.apatheia.model.PackageDataParser
 import org.apatheia.error.PackageDataParsingError
 import cats.implicits._
 import scala.util.Try
