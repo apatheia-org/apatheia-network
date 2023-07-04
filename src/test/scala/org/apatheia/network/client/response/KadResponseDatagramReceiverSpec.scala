@@ -6,11 +6,8 @@ import org.apatheia.network.model.OpId
 import java.util.UUID
 import org.apatheia.network.model.UDPDatagram
 import org.apatheia.network.model.KadResponsePackage
-import org.apatheia.network.model.KadHeaders
 import java.net.InetSocketAddress
 import org.apatheia.model.NodeId
-import org.apatheia.network.model.KadResponsePayload
-import org.apatheia.network.model.KadCommand
 import org.apatheia.network.client.response.store.ResponseStoreRef
 import cats.effect.IO
 import org.apatheia.network.client.response.store.DefaultResponseStoreRef
@@ -21,6 +18,9 @@ import scala.collection.immutable
 
 import cats.effect.unsafe.implicits.global
 import org.scalatest.OptionValues
+import org.apatheia.network.model.KadResponseHeaders
+import org.apatheia.network.model.KadResponsePayload
+import org.apatheia.network.model.KadCommand
 
 class KadResponseDatagramReceiverSpec
     extends AnyFlatSpec
@@ -51,23 +51,25 @@ class KadResponseDatagramReceiverSpec
 
   trait TestContext {
     val opId = OpId(UUID.randomUUID())
-    val baseDatagram = UDPDatagram(
-      from = new InetSocketAddress("127.0.0.1", 8888),
-      to = new InetSocketAddress("127.0.0.1", 9999),
-      data = Array.fill[Byte](16)(0)
-    )
-    val baseResponsePackage = KadResponsePackage(
-      headers = KadHeaders(
+    val data = Array.fill[Byte](16)(0)
+    val responsePackage = KadResponsePackage(
+      headers = KadResponseHeaders(
         from = NodeId(1),
         to = NodeId(2),
         opId = opId
       ),
-      payload =
-        KadResponsePayload(KadCommand.FindNode, Array.fill[Byte](16)(0)),
-      udpDatagram = baseDatagram
+      payload = KadResponsePayload(
+        command = KadCommand.FindNode,
+        data = data
+      )
     )
-    val datagram = baseDatagram.copy(data = baseResponsePackage.toByteArray)
-    val responsePackage = baseResponsePackage.copy(udpDatagram = datagram)
+
+    val datagram = UDPDatagram(
+      from = new InetSocketAddress("127.0.0.1", 8888),
+      to = new InetSocketAddress("127.0.0.1", 9999),
+      data = responsePackage.toByteArray
+    )
+
   }
 
 }

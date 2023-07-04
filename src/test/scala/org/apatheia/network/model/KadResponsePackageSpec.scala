@@ -23,19 +23,18 @@ class KadResponsePackageSpec extends AnyFlatSpec with Matchers {
       to = new InetSocketAddress("127.0.0.1", 9999),
       data = Array.fill[Byte](16)(0)
     )
-    val baseResponsePackage = KadResponsePackage(
-      headers = KadHeaders(
+    val basePayload =
+      KadResponsePayload(KadCommand.FindNode, Array.fill[Byte](16)(0))
+    val responsePackage = KadResponsePackage(
+      headers = KadResponseHeaders(
         from = NodeId(1),
         to = NodeId(2),
         opId = opId
       ),
-      payload =
-        KadResponsePayload(KadCommand.FindNode, Array.fill[Byte](16)(0)),
-      udpDatagram = baseDatagram
+      payload = KadResponsePayload(KadCommand.FindNode, Array.fill[Byte](16)(0))
     )
     val validDatagram =
-      baseDatagram.copy(data = baseResponsePackage.toByteArray)
-    val responsePackage = baseResponsePackage.copy(udpDatagram = validDatagram)
+      baseDatagram.copy(data = responsePackage.toByteArray)
     val invalidDatagram = baseDatagram.copy(data = "A".getBytes())
   }
 

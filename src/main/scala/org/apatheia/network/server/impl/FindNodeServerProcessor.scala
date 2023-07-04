@@ -11,7 +11,7 @@ import org.apatheia.network.client.UDPClient
 import org.apatheia.model.Contact
 import org.apatheia.network.model.LocalhostMetadata
 import org.apatheia.network.model.tags.ContactTag
-import org.apatheia.network.model.KadHeaders
+import org.apatheia.network.model.KadResponseHeaders
 import org.apatheia.network.model.UDPDatagram
 import java.net.InetSocketAddress
 import cats.implicits._
@@ -71,23 +71,14 @@ case class FindNodeServerProcessor[F[_]: Async](
       localhostMetadata: LocalhostMetadata,
       udpDatagram: UDPDatagram
   ): KadResponsePackage = KadResponsePackage(
-    headers = KadHeaders(
+    headers = KadResponseHeaders(
       from = localhostMetadata.localContact.nodeId,
       to = kadDatagram.headers.from,
       opId = kadDatagram.headers.opId
     ),
-    payload = KadResponsePayload(command = KadCommand.FindNode, contactsData),
-    // TODO improve shitty circular design
-    udpDatagram = UDPDatagram(
-      from = localhostMetadata.from,
-      to = new InetSocketAddress(
-        // gambiarra temporaria
-        udpDatagram.from.getHostName(),
-        kadDatagram.headers.responseServerPort.getOrElse(ServerPort(0)).value
-      ),
-      Array.empty
-    )
+    payload = KadResponsePayload(command = KadCommand.FindNode, contactsData)
   )
+
   private def sendResponse(
       contacts: List[Contact],
       udpDatagram: UDPDatagram,
@@ -107,7 +98,10 @@ case class FindNodeServerProcessor[F[_]: Async](
       udpDatagram
     )
     result <- requestServerClient.send(
-      targetAddress = kadResponsePackage.udpDatagram.to,
+      targetAddress = new InetSocketAddress(
+        udpDatagram.from.getHostName(),
+        kadDatagram.headers.responseServerPort.value
+      ),
       data = kadResponsePackage.toByteArray
     )
   } yield ()

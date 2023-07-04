@@ -6,7 +6,7 @@ import org.apatheia.network.model.OpId
 import scala.concurrent.duration.Duration
 import org.apatheia.network.model.KadResponsePackage
 import org.apatheia.network.client.UDPClient
-import org.apatheia.network.model.KadHeaders
+import org.apatheia.network.model.KadResponseHeaders
 import org.apatheia.network.model.KadDatagramPackage
 import org.apatheia.network.model.KadDatagramPayload
 import org.apatheia.network.model.KadCommand
@@ -18,6 +18,7 @@ import org.typelevel.log4cats.slf4j.Slf4jLogger
 import org.apatheia.network.model.tags.ContactTag
 import org.apatheia.network.meta.LocalhostMetadataRef
 import cats.effect.kernel.Sync
+import org.apatheia.network.model.KadRequestHeaders
 
 final case class DefaultFindNodeClient[F[_]: Sync](
     kadResponseConsumer: KadResponseConsumer[F],
@@ -62,11 +63,11 @@ final case class DefaultFindNodeClient[F[_]: Sync](
   ): F[KadDatagramPackage] =
     defaultLocalhostMetadataRef.get.map(locahostMetadata =>
       KadDatagramPackage(
-        headers = KadHeaders(
+        headers = KadRequestHeaders(
           from = locahostMetadata.localContact.nodeId,
           to = remote.nodeId,
           opId = OpId.random,
-          responseServerPort = Some(locahostMetadata.responseServerPort)
+          responseServerPort = locahostMetadata.responseServerPort
         ),
         payload = KadDatagramPayload(
           command = KadCommand.FindNode,

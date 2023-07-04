@@ -5,12 +5,11 @@ import org.scalatest.matchers.should.Matchers
 import org.apatheia.network.client.response.store.ResponseStoreRef
 import cats.effect.IO
 import org.apatheia.network.model.{KadResponsePackage, OpId}
-import org.apatheia.network.model.KadHeaders
+import org.apatheia.network.model.KadResponseHeaders
 import org.apatheia.model.NodeId
 import org.apatheia.network.model.KadResponsePayload
 import org.apatheia.network.model.KadCommand
 import java.util.UUID
-import org.apatheia.network.model.UDPDatagram
 import java.net.InetSocketAddress
 import scala.concurrent.duration._
 import cats.effect.unsafe.implicits.global
@@ -47,20 +46,13 @@ class KadResponseConsumerSpec extends AnyFlatSpec with Matchers {
 
     val opId = OpId(UUID.randomUUID())
 
-    val datagram = UDPDatagram(
-      from = new InetSocketAddress("127.0.0.1", 8888),
-      to = new InetSocketAddress("127.0.0.1", 9999),
-      data = Array.empty
-    )
-
     val responsePackage = KadResponsePackage(
-      headers = KadHeaders(
+      headers = KadResponseHeaders(
         from = NodeId(1),
         to = NodeId(2),
         opId = opId
       ),
-      payload = KadResponsePayload(KadCommand.FindNode, Array.empty),
-      udpDatagram = datagram
+      payload = KadResponsePayload(KadCommand.FindNode, Array.empty)
     )
 
     val nonEmptyResponseStoreRef: ResponseStoreRef[IO] =
