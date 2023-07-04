@@ -10,7 +10,6 @@ import org.typelevel.log4cats.slf4j.Slf4jLogger
 import org.apatheia.network.client.UDPClient
 import org.apatheia.model.Contact
 import org.apatheia.network.model.LocalhostMetadata
-import org.apatheia.network.model.tags.ContactTag
 import org.apatheia.network.model.KadResponseHeaders
 import org.apatheia.network.model.UDPDatagram
 import java.net.InetSocketAddress
@@ -18,6 +17,7 @@ import cats.implicits._
 import org.apatheia.network.model.KadResponsePackage
 import org.apatheia.network.model.KadCommand
 import org.apatheia.network.model.KadResponsePayload
+import org.apatheia.network.model.Tag
 
 case class FindNodeServerProcessor[F[_]: Async](
     localhostMetadataRef: LocalhostMetadataRef[F],
@@ -62,7 +62,7 @@ case class FindNodeServerProcessor[F[_]: Async](
   }
 
   private def formatWithTag(contact: Contact): Array[Byte] =
-    Array.concat(ContactTag.tagData, contact.toByteArray)
+    Array.concat(Tag.Contact.tagData, contact.toByteArray)
 
   private def enrichWithMetadata(
       contactsData: Array[Byte],
