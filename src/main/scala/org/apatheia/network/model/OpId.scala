@@ -3,22 +3,21 @@ package org.apatheia.network.model
 import java.util.UUID
 import org.apatheia.model.PackageData
 import java.nio.ByteBuffer
-import org.apatheia.model.PackageDataParser
 import org.apatheia.error.PackageDataParsingError
 import cats.implicits._
 import scala.util.Try
 
 final case class OpId(value: UUID) extends PackageData {
   override def toByteArray: Array[Byte] = ByteBuffer
-    .wrap(new Array[Byte](OpId.BYTESIZE))
+    .wrap(new Array[Byte](OpId.byteSize))
     .putLong(value.getMostSignificantBits())
     .putLong(value.getLeastSignificantBits())
     .array()
 }
 
-object OpId extends PackageDataParser[OpId] {
+object OpId extends DefaultBytesizedParser[OpId] {
 
-  val BYTESIZE = 16
+  override val byteSize: Int = 16
 
   override def parse(
       byteArray: Array[Byte]
