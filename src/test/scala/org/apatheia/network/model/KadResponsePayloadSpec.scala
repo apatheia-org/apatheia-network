@@ -3,7 +3,6 @@ package org.apatheia.network.model
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.apatheia.error.PackageDataParsingError
-import org.apatheia.model.PackageDataParser
 
 class KadResponsePayloadSpec extends AnyWordSpec with Matchers {
 

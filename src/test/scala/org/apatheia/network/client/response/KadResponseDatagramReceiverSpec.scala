@@ -8,7 +8,6 @@ import org.apatheia.network.model.UDPDatagram
 import org.apatheia.network.model.KadResponsePackage
 import java.net.InetSocketAddress
 import org.apatheia.model.NodeId
-import org.apatheia.network.client.response.store.ResponseStoreRef
 import cats.effect.IO
 import org.apatheia.network.client.response.store.DefaultResponseStoreRef
 import org.apatheia.store.KeyValueStore

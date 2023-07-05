@@ -6,7 +6,6 @@ import cats.effect.unsafe.implicits.global
 import org.apatheia.network.model.{KadResponsePackage, OpId}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import org.apatheia.store.ApatheiaKeyValueStore
 import org.apatheia.store.KeyValueStore
 import org.apatheia.store.ApatheiaKeyValueStore
 import scala.collection.immutable.HashMap
@@ -15,7 +14,6 @@ import java.util.UUID
 import org.apatheia.network.model.KadCommand
 import org.apatheia.network.model.KadResponseHeaders
 import org.apatheia.network.model.KadResponsePayload
-import java.net.InetSocketAddress
 
 class DefaultResponseStoreRefSpec extends AnyFlatSpec with Matchers {
 
