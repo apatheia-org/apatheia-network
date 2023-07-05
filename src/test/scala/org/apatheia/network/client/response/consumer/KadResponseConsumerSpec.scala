@@ -10,7 +10,6 @@ import org.apatheia.model.NodeId
 import org.apatheia.network.model.KadResponsePayload
 import org.apatheia.network.model.KadCommand
 import java.util.UUID
-import java.net.InetSocketAddress
 import scala.concurrent.duration._
 import cats.effect.unsafe.implicits.global
 import java.time.LocalDateTime

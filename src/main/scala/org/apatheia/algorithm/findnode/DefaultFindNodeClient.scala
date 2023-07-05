@@ -14,10 +14,10 @@ import cats.implicits._
 import java.net.InetSocketAddress
 import org.apatheia.error.PackageDataParsingError
 import org.typelevel.log4cats.slf4j.Slf4jLogger
-import org.apatheia.network.model.tags.ContactTag
 import org.apatheia.network.meta.LocalhostMetadataRef
 import cats.effect.kernel.Sync
 import org.apatheia.network.model.KadRequestHeaders
+import org.apatheia.network.model.Tag
 
 final case class DefaultFindNodeClient[F[_]: Sync](
     kadResponseConsumer: KadResponseConsumer[F],
@@ -32,29 +32,28 @@ final case class DefaultFindNodeClient[F[_]: Sync](
       remote: Contact,
       target: NodeId
   ): F[List[Contact]] = {
-    val contactsResponse: F[Either[PackageDataParsingError, List[Contact]]] =
-      for {
-        kadDatagramPackage <- toKadDatagramPackage(remote, target)
-        _ <- udpClient.send(
-          new InetSocketAddress(remote.ip, remote.port),
-          kadDatagramPackage.toByteArray
-        )
-        response <- kadResponseConsumer.consumeResponse(
-          opId = kadDatagramPackage.headers.opId,
-          timeout = responseTimeout
-        )
-        contacts <- toContacts(response)
-      } yield (contacts)
-
-    // try to parse contacts response
-    contactsResponse.flatMap {
-      _ match {
-        case Left(error) =>
-          logger.error(error.message) *> Sync[F].pure(List.empty)
-        case Right(contacts) => Sync[F].pure(contacts)
-      }
+    findContacts(remote, target).flatMap {
+      case Left(error) =>
+        logger.error(error.message) *> Sync[F].pure(List.empty)
+      case Right(contacts) => Sync[F].pure(contacts)
     }
   }
+
+  private def findContacts(
+      remote: Contact,
+      target: NodeId
+  ): F[Either[PackageDataParsingError, List[Contact]]] = for {
+    kadDatagramPackage <- toKadDatagramPackage(remote, target)
+    _ <- udpClient.send(
+      new InetSocketAddress(remote.ip, remote.port),
+      kadDatagramPackage.toByteArray
+    )
+    response <- kadResponseConsumer.consumeResponse(
+      opId = kadDatagramPackage.headers.opId,
+      timeout = responseTimeout
+    )
+    contacts <- toContacts(response)
+  } yield (contacts)
 
   private def toKadDatagramPackage(
       remote: Contact,
@@ -100,48 +99,40 @@ final case class DefaultFindNodeClient[F[_]: Sync](
 
   private def parsePayloadDataToContacts(
       response: KadResponsePackage
-  ): F[Either[PackageDataParsingError, List[Contact]]] = {
-    // Extract indexes of Contact tags
-    val payloadData: Array[Byte] = response.payload.data
-    val indexes: Seq[Int] =
-      findPatternIndexes(
-        ContactTag.tagData,
-        payloadData
-      )
-    val result: List[Either[PackageDataParsingError, Contact]] =
-      slideContactsByIndexes(indexes, payloadData).toList
+  ): F[Either[PackageDataParsingError, List[Contact]]] =
+    Sync[F].delay {
+      val payloadData: Array[Byte] = response.payload.data
+      val indexes: Seq[Int] =
+        findPatternIndexes(Tag.Contact.tagData, payloadData)
+      val result: List[Either[PackageDataParsingError, Contact]] =
+        slideContactsByIndexes(indexes, payloadData).toList
 
-    val errors: List[PackageDataParsingError] = collectErrors(result)
-
-    // compute final response result
-    Sync[F].pure(
-      toContactsResponse(
-        slideContactsByIndexes(indexes, payloadData).toList,
-        errors
-      )
-    )
-  }
+      toContactsResponse(result)
+    }
 
   private def toContactsResponse(
-      result: List[Either[PackageDataParsingError, Contact]],
-      errors: List[PackageDataParsingError]
-  ): Either[PackageDataParsingError, List[Contact]] = if (errors.isEmpty) {
-    // weird gambiarra hunting arround
-    Right(result.flatMap(_ match {
-      case Right(contact) => {
-        List(contact)
-      }
-      case Left(e) => {
-        List()
-      }
-    }))
-  } else {
-    Left(
-      PackageDataParsingError(
-        s"Error while parsing response contacts:\n\n ${errors.map(_.message).mkString("\n")}"
+      result: List[Either[PackageDataParsingError, Contact]]
+  ): Either[PackageDataParsingError, List[Contact]] = {
+    val errors = collectErrors(result)
+
+    if (errors.isEmpty) {
+      Right(collectContacts(result))
+    } else {
+      Left(
+        PackageDataParsingError(
+          s"Error while parsing response contacts:\n\n* ${errors.map(_.message).mkString("\n")}"
+        )
       )
-    )
+    }
   }
+
+  private def collectContacts(
+      result: List[Either[PackageDataParsingError, Contact]]
+  ): List[Contact] = result
+    .flatMap(_ match {
+      case Right(c) => List(c)
+      case _        => List()
+    })
 
   private def collectErrors(
       result: List[Either[PackageDataParsingError, Contact]]
@@ -154,19 +145,19 @@ final case class DefaultFindNodeClient[F[_]: Sync](
   private def slideContactsByIndexes(
       indexes: Seq[Int],
       payloadData: Array[Byte]
-  ): Iterator[Either[PackageDataParsingError, Contact]] = {
-    indexes
-      .sliding(2, 1)
-      .map(pairSeq => {
-        pairSeq match {
-          case Seq(x) => {
-            Contact.parse(payloadData.drop(x))
+  ): Iterator[Either[PackageDataParsingError, Contact]] = indexes match {
+    case Seq(x) => Iterator(Contact.parse(payloadData.drop(x)))
+    case _ =>
+      indexes
+        .sliding(2, 1)
+        .map(pairSeq => {
+          pairSeq match {
+            case Seq(x, y) => {
+              Contact.parse(payloadData.slice(x, y - Tag.Contact.tagData.size))
+            }
           }
-          case Seq(x, y) => {
-            Contact.parse(payloadData.slice(x, y))
-          }
-        }
-      })
+        })
+        .concat(Iterator(Contact.parse(payloadData.drop(indexes.last))))
   }
 
   private def findPatternIndexes(
@@ -189,8 +180,8 @@ final case class DefaultFindNodeClient[F[_]: Sync](
           )
         }
         .map(
-          _ + ContactTag.tagData.size
-        ) // gambiarra with potential of improvements
+          _ + Tag.Contact.tagData.size
+        )
     }
   }
 
