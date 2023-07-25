@@ -30,7 +30,7 @@ import cats.effect.unsafe.implicits.global
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 import java.net.InetSocketAddress
 
-class FindNodeIntegrationSpec extends AnyFlatSpec with Matchers {
+class FindNodeClientIntegrationSpec extends AnyFlatSpec with Matchers {
 
   private val logger = Slf4jLogger.getLogger[IO]
 
@@ -289,14 +289,14 @@ class FindNodeIntegrationSpec extends AnyFlatSpec with Matchers {
 
     val localhostMetadata = LocalhostMetadata(
       localContact = localContact,
-      routingTable = RoutingTable(localNodeId, List(localContact)),
+      routingTable = RoutingTable(localNodeId, Set(localContact)),
       serverPort = localServerPort,
       responseServerPort = responseServerPort
     )
 
     val remoteMetadata = LocalhostMetadata(
       localContact = targetContact,
-      routingTable = RoutingTable(remoteNodeId, List(targetContact)),
+      routingTable = RoutingTable(remoteNodeId, Set(targetContact)),
       serverPort = remoteServerPort,
       responseServerPort = remoteResponseServerPort
     )
@@ -304,7 +304,7 @@ class FindNodeIntegrationSpec extends AnyFlatSpec with Matchers {
     val remoteMetadataNoTarget = LocalhostMetadata(
       localContact = targetContact,
       routingTable =
-        RoutingTable(remoteNodeId, List(nonTargetContact1, nonTargetContact2)),
+        RoutingTable(remoteNodeId, Set(nonTargetContact1, nonTargetContact2)),
       serverPort = remoteServerPort,
       responseServerPort = remoteResponseServerPort
     )
