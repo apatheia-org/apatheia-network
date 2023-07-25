@@ -5,6 +5,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.EitherValues
 import java.nio.ByteBuffer
+import org.apatheia.codec.Codec._
 
 class OpIdSpec extends AnyFlatSpec with Matchers with EitherValues {
 
@@ -15,7 +16,7 @@ class OpIdSpec extends AnyFlatSpec with Matchers with EitherValues {
       .putLong(uuid.getMostSignificantBits())
       .putLong(uuid.getLeastSignificantBits())
       .array()
-    val opId = OpId.parse(byteArray)
+    val opId = byteArray.toObject[OpId]
 
     opId.isRight shouldBe true
     opId.value.value shouldBe uuid
@@ -24,7 +25,7 @@ class OpIdSpec extends AnyFlatSpec with Matchers with EitherValues {
 
   it should "return a PackageDataParsingError if the array is not 16 bytes long" in {
     val byteArray = Array[Byte](1, 2, 3, 4)
-    val opId = OpId.parse(byteArray)
+    val opId = byteArray.toObject[OpId]
     opId.isLeft shouldBe true
     opId.left.value.message shouldBe "Error while parsing OpId corrupt data"
   }

@@ -22,7 +22,8 @@ lazy val root = (project in file(".")).settings(
     "org.apache.mina" % "mina-core" % "2.2.1",
 
     // apatheia protocol
-    "org.apatheia" %% "apatheia-p2p-protocol" % "0.0.9-alpha",
+    "org.apatheia" %% "apatheia-p2p-protocol" % "0.0.11-alpha",
+    "org.apatheia" %% "apatheia-data-codec" % "0.0.2",
 
     // better monadic for compiler plugin as suggested by documentation
     compilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),

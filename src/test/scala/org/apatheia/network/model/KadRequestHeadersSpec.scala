@@ -5,7 +5,10 @@ import org.scalatest.matchers.should.Matchers
 import java.util.UUID
 import java.net.InetSocketAddress
 import org.apatheia.model.NodeId
-import org.apatheia.error.PackageDataParsingError
+import org.apatheia.codec.Codec._
+import org.apatheia.network.model.Codecs.ContactCodec._
+import org.apatheia.network.model.Codecs.NodeIdCodec._
+import org.apatheia.codec.DecodingFailure
 
 class KadRequestHeadersSpec extends AnyFlatSpec with Matchers {
 
@@ -17,17 +20,17 @@ class KadRequestHeadersSpec extends AnyFlatSpec with Matchers {
         opId.toByteArray,
         serverPort.toByteArray
       )
-    val result = KadRequestHeaders.parse(validData)
+    val result = validData.toObject[KadRequestHeaders]
 
     result shouldBe Right(KadRequestHeaders(from, to, opId, serverPort))
   }
 
   it should "return PackageDataParsingError object if data byte array is invalid" in {
     val invalidData = "A".getBytes()
-    val result = KadRequestHeaders.parse(invalidData)
+    val result = invalidData.toObject[KadRequestHeaders]
 
     result shouldBe Left(
-      PackageDataParsingError(
+      DecodingFailure(
         "Unexpected error while parsing a byte array into a NodeId: java.lang.NumberFormatException: For input string: \"A\""
       )
     )

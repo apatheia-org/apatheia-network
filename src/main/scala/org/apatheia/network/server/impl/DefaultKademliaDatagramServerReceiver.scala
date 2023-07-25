@@ -9,8 +9,9 @@ import org.apatheia.network.server.KademliaServerProcessor
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 import org.apatheia.network.meta.LocalhostMetadataRef
 import org.apatheia.network.client.UDPClient
-import org.apatheia.algorithm.findnode.sub.DefaultFindNodeSubscriberAlgorithm
+import org.apatheia.algorithm.findnode.sub.SubscriberFindNodeAlgorithm
 import cats.implicits._
+import org.apatheia.codec.Codec._
 
 case class DefaultKademliaDatagramServerReceiver[F[_]: Async](
     localhostMetadataRef: LocalhostMetadataRef[F],
@@ -22,7 +23,7 @@ case class DefaultKademliaDatagramServerReceiver[F[_]: Async](
     Map(
       KadCommand.FindNode -> FindNodeServerProcessor[F](
         localhostMetadataRef = localhostMetadataRef,
-        findNodeSubscriberAlgorithm = DefaultFindNodeSubscriberAlgorithm[F](),
+        findNodeSubscriberAlgorithm = SubscriberFindNodeAlgorithm[F](),
         requestServerClient = requestServerClient
       )
     )
@@ -32,7 +33,7 @@ case class DefaultKademliaDatagramServerReceiver[F[_]: Async](
       _ <- logger.debug(
         s"Processing incoming Kademlia UDP datagram: ${udpDatagram.from}"
       )
-      result <- KadDatagramPackage.parse(udpDatagram) match {
+      result <- udpDatagram.data.toObject[KadDatagramPackage] match {
         case Left(e) =>
           logger.error(s"Error while parsing UDP Datagram(${udpDatagram.from
               .getHostName()}:${udpDatagram.from.getPort()}): ${e.message}")

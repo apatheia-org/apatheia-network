@@ -5,25 +5,28 @@ import org.scalatest.matchers.should.Matchers
 import java.util.UUID
 import java.net.InetSocketAddress
 import org.apatheia.model.NodeId
-import org.apatheia.error.PackageDataParsingError
+import org.apatheia.network.model.Codecs.NodeIdCodec._
+import org.apatheia.network.model.Codecs.NodeIdCodec
+import org.apatheia.codec.Codec._
+import org.apatheia.codec.DecodingFailure
 
 class KadResponseHeadersSpec extends AnyFlatSpec with Matchers {
 
-  "parse()" should "return a KadHeaders object if data byte array is valid" in new TestContext {
+  "toObject()" should "return a KadHeaders object if data byte array is valid" in new TestContext {
     val validData =
       Array.concat(from.toByteArray, to.toByteArray, opId.toByteArray)
-    val test1 = validData.drop(NodeId.BYTESIZE).take(NodeId.BYTESIZE)
-    val result = KadResponseHeaders.parse(validData)
+    val test1 = validData.drop(NodeIdCodec.BYTESIZE).take(NodeIdCodec.BYTESIZE)
+    val result = validData.toObject[KadResponseHeaders]
 
     result shouldBe Right(KadResponseHeaders(from, to, opId))
   }
 
-  it should "return PackageDataParsingError object if data byte array is invalid" in {
+  it should "return DecodingFailure object if data byte array is invalid" in {
     val invalidData = "A".getBytes()
-    val result = KadResponseHeaders.parse(invalidData)
+    val result = invalidData.toObject[KadResponseHeaders]
 
     result shouldBe Left(
-      PackageDataParsingError(
+      DecodingFailure(
         "Unexpected error while parsing a byte array into a NodeId: java.lang.NumberFormatException: For input string: \"A\""
       )
     )

@@ -5,15 +5,17 @@ import org.scalatest.matchers.should.Matchers
 import org.apatheia.model.NodeId
 import java.net.InetSocketAddress
 import java.util.UUID
+import org.apatheia.codec.Codec._
+import org.apatheia.codec.DecodingFailure
 
 class KadResponsePackageSpec extends AnyFlatSpec with Matchers {
 
-  "parse()" should "return KadResponsePackage if datagram is able to be parsed into response" in new TestContext {
-    KadResponsePackage.parse(validDatagram).isRight shouldBe true
+  "toObject()" should "return KadResponsePackage if datagram is able to be parsed into response" in new TestContext {
+    validDatagram.data.toObject[KadResponsePackage].isRight shouldBe true
   }
 
-  "parse()" should "return PackageDataParsingError if datagram is not able to be parsed into response" in new TestContext {
-    KadResponsePackage.parse(invalidDatagram).isLeft shouldBe true
+  "toObject()" should "return PackageDataParsingError if datagram is not able to be parsed into response" in new TestContext {
+    invalidDatagram.data.toObject[KadResponsePackage].isLeft shouldBe true
   }
 
   trait TestContext {

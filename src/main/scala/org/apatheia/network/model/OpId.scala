@@ -1,33 +1,36 @@
 package org.apatheia.network.model
 
 import java.util.UUID
-import org.apatheia.model.PackageData
 import java.nio.ByteBuffer
-import org.apatheia.error.PackageDataParsingError
 import cats.implicits._
 import scala.util.Try
+import org.apatheia.codec.{Encoder, Decoder}
+import org.apatheia.codec.DecodingFailure
 
-final case class OpId(value: UUID) extends PackageData {
-  override def toByteArray: Array[Byte] = ByteBuffer
-    .wrap(new Array[Byte](OpId.byteSize))
-    .putLong(value.getMostSignificantBits())
-    .putLong(value.getLeastSignificantBits())
-    .array()
-}
+final case class OpId(value: UUID)
 
-object OpId extends DefaultBytesizedParser[OpId] {
+object OpId {
 
-  override val byteSize: Int = 16
+  val byteSize: Int = 16
 
-  override def parse(
-      byteArray: Array[Byte]
-  ): Either[PackageDataParsingError, OpId] = {
-    val byteBuffer: ByteBuffer = ByteBuffer.wrap(byteArray)
-    Try(new UUID(byteBuffer.getLong(), byteBuffer.getLong())).toEither
-      .flatMap(uuid => Right(OpId(uuid)))
-      .leftFlatMap(_ =>
-        Left(PackageDataParsingError("Error while parsing OpId corrupt data"))
-      )
+  implicit val decoder: Decoder[OpId] = new Decoder[OpId] {
+    override def toObject(data: Array[Byte]): Either[DecodingFailure, OpId] = {
+      val byteBuffer: ByteBuffer = ByteBuffer.wrap(data)
+      Try(new UUID(byteBuffer.getLong(), byteBuffer.getLong())).toEither
+        .flatMap(uuid => Right(OpId(uuid)))
+        .leftFlatMap(_ =>
+          Left(DecodingFailure("Error while parsing OpId corrupt data"))
+        )
+    }
+  }
+
+  implicit val encoder: Encoder[OpId] = new Encoder[OpId] {
+    override def toByteArray(opId: OpId): Array[Byte] = ByteBuffer
+      .wrap(new Array[Byte](OpId.byteSize))
+      .putLong(opId.value.getMostSignificantBits())
+      .putLong(opId.value.getLeastSignificantBits())
+      .array()
+
   }
 
   def random: OpId = OpId(UUID.randomUUID())

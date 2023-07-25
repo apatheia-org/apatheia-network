@@ -2,7 +2,9 @@ package org.apatheia.network.model
 
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import org.apatheia.error.PackageDataParsingError
+import org.apatheia.codec.Codec._
+import org.apatheia.codec.DecodingFailure
+import org.apatheia.network.model.KadCommand._
 
 class KadCommandSpec extends AnyWordSpec with Matchers {
 
@@ -15,9 +17,13 @@ class KadCommandSpec extends AnyWordSpec with Matchers {
     }
 
     "be able to convert to byte array" in {
-      val findNodeByteArray = KadCommand.FindNode.toByteArray
-      val findValueByteArray = KadCommand.FindValue.toByteArray
-      val storeByteArray = KadCommand.Store.toByteArray
+      val findNode: KadCommand = KadCommand.FindNode
+      val findValue: KadCommand = KadCommand.FindValue
+      val store: KadCommand = KadCommand.Store
+
+      val findNodeByteArray: Array[Byte] = findNode.toByteArray
+      val findValueByteArray = findValue.toByteArray
+      val storeByteArray = store.toByteArray
 
       // Perform assertions on the byte arrays
       // Example assertion: findNodeByteArray should have length 1 and its value should be 0
@@ -39,10 +45,10 @@ class KadCommandSpec extends AnyWordSpec with Matchers {
       val storeByteArray = Array[Byte](2)
       val invalidByteArray = Array[Byte](3)
 
-      val parsedFindNode = KadCommand.parse(findNodeByteArray)
-      val parsedFindValue = KadCommand.parse(findValueByteArray)
-      val parsedStore = KadCommand.parse(storeByteArray)
-      val parsedInvalid = KadCommand.parse(invalidByteArray)
+      val parsedFindNode = findNodeByteArray.toObject[KadCommand]
+      val parsedFindValue = findValueByteArray.toObject[KadCommand]
+      val parsedStore = storeByteArray.toObject[KadCommand]
+      val parsedInvalid = invalidByteArray.toObject[KadCommand]
 
       // Perform assertions on the parsed results
       // Example assertion: parsedFindNode should be a Right containing KadCommand.FindNode
@@ -54,9 +60,9 @@ class KadCommandSpec extends AnyWordSpec with Matchers {
       // Example assertion: parsedStore should be a Right containing KadCommand.Store
       parsedStore shouldBe Right(KadCommand.Store)
 
-      // Example assertion: parsedInvalid should be a Left containing a PackageDataParsingError
+      // Example assertion: parsedInvalid should be a Left containing a DecodingFailure
       parsedInvalid shouldBe a[Left[_, _]]
-      parsedInvalid.left.get shouldBe a[PackageDataParsingError]
+      parsedInvalid.left.get shouldBe a[DecodingFailure]
     }
 
   }

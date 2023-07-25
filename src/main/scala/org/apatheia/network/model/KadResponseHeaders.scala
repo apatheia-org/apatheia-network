@@ -1,28 +1,41 @@
 package org.apatheia.network.model
 
 import org.apatheia.model.NodeId
-import org.apatheia.model.PackageData
-import org.apatheia.error.PackageDataParsingError
-import org.apatheia.network.model.BytesizedPackageData._
+import org.apatheia.codec.Encoder
+import org.apatheia.codec.Decoder
+import org.apatheia.codec.Codec._
+import org.apatheia.codec.DecodingFailure
+import org.apatheia.network.model.Codecs.NodeIdCodec
+import org.apatheia.network.model.Codecs.NodeIdCodec._
 
 final case class KadResponseHeaders(from: NodeId, to: NodeId, opId: OpId)
-    extends PackageData {
 
-  override def toByteArray: Array[Byte] =
-    Array.concat(from.toByteArray, to.toByteArray, opId.toByteArray)
+object KadResponseHeaders {
 
-}
+  implicit val encoder: Encoder[KadResponseHeaders] =
+    new Encoder[KadResponseHeaders] {
+      override def toByteArray(k: KadResponseHeaders): Array[Byte] =
+        Array.concat(k.from.toByteArray, k.to.toByteArray, k.opId.toByteArray)
+    }
 
-object KadResponseHeaders extends DefaultBytesizedParser[KadResponseHeaders] {
-  override def parse(
-      byteArray: Array[Byte]
-  ): Either[PackageDataParsingError, KadResponseHeaders] = for {
-    from <- NodeId.parse(byteArray.take(NodeId.byteSize))
-    to <- NodeId.parse(byteArray.drop(NodeId.byteSize).take(NodeId.byteSize))
-    opId <- OpId.parse(
-      byteArray.drop(2 * NodeId.byteSize).take(OpId.byteSize)
-    )
-  } yield (KadResponseHeaders(from, to, opId))
+  implicit val decoder: Decoder[KadResponseHeaders] =
+    new Decoder[KadResponseHeaders] {
+      override def toObject(
+          data: Array[Byte]
+      ): Either[DecodingFailure, KadResponseHeaders] = for {
+        from <- data.take(NodeIdCodec.BYTESIZE).toObject[NodeId]
+        to <- data
+          .drop(NodeIdCodec.BYTESIZE)
+          .take(NodeIdCodec.BYTESIZE)
+          .toObject[NodeId]
+        opId <- data
+          .drop(2 * NodeIdCodec.BYTESIZE)
+          .take(OpId.byteSize)
+          .toObject[OpId]
 
-  override val byteSize: Int = NodeId.byteSize + NodeId.byteSize + OpId.byteSize
+      } yield (KadResponseHeaders(from, to, opId))
+
+    }
+
+  val byteSize: Int = 2 * NodeIdCodec.BYTESIZE + OpId.byteSize
 }

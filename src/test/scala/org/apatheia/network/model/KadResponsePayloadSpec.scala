@@ -2,7 +2,8 @@ package org.apatheia.network.model
 
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import org.apatheia.error.PackageDataParsingError
+import org.apatheia.codec.Codec._
+import org.apatheia.codec.DecodingFailure
 
 class KadResponsePayloadSpec extends AnyWordSpec with Matchers {
 
@@ -23,7 +24,7 @@ class KadResponsePayloadSpec extends AnyWordSpec with Matchers {
     "be able to parse a byte array into KadResponsePayload" in {
       val byteArray = Array.concat(Array(command.value.toByte), data)
 
-      val parsedResult = KadResponsePayload.parse(byteArray)
+      val parsedResult = byteArray.toObject[KadResponsePayload]
 
       // Perform assertions on the parsedResult
       // Example assertion: parsedResult should be a Right containing a KadResponsePayload
@@ -36,12 +37,12 @@ class KadResponsePayloadSpec extends AnyWordSpec with Matchers {
       val invalidByteArray =
         Array[Byte](10, 2, 3) // Invalid byte array with incorrect length
 
-      val parsedResult = KadResponsePayload.parse(invalidByteArray)
+      val parsedResult = invalidByteArray.toObject[KadResponsePayload]
 
       // Perform assertions on the parsedResult
       // Example assertion: parsedResult should be a Left containing a PackageDataParsingError
       parsedResult.isLeft shouldBe true
-      parsedResult.left.get shouldBe a[PackageDataParsingError]
+      parsedResult.left.get shouldBe a[DecodingFailure]
     }
 
   }

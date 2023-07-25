@@ -12,12 +12,15 @@ import org.apatheia.network.model.KadCommand
 import org.apatheia.model.NodeId
 import cats.implicits._
 import java.net.InetSocketAddress
-import org.apatheia.error.PackageDataParsingError
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 import org.apatheia.network.meta.LocalhostMetadataRef
 import cats.effect.kernel.Sync
 import org.apatheia.network.model.KadRequestHeaders
 import org.apatheia.network.model.Tag
+import org.apatheia.codec.Codec._
+import org.apatheia.network.model.Codecs.NodeIdCodec._
+import org.apatheia.network.model.Codecs.ContactCodec._
+import org.apatheia.codec.DecodingFailure
 
 final case class DefaultFindNodeClient[F[_]: Sync](
     kadResponseConsumer: KadResponseConsumer[F],
@@ -42,7 +45,7 @@ final case class DefaultFindNodeClient[F[_]: Sync](
   private def findContacts(
       remote: Contact,
       target: NodeId
-  ): F[Either[PackageDataParsingError, List[Contact]]] = for {
+  ): F[Either[DecodingFailure, List[Contact]]] = for {
     kadDatagramPackage <- toKadDatagramPackage(remote, target)
     _ <- udpClient.send(
       new InetSocketAddress(remote.ip, remote.port),
@@ -76,7 +79,7 @@ final case class DefaultFindNodeClient[F[_]: Sync](
 
   private def toContacts(
       responsePackage: Option[KadResponsePackage]
-  ): F[Either[PackageDataParsingError, List[Contact]]] =
+  ): F[Either[DecodingFailure, List[Contact]]] =
     responsePackage
       .map(responsePkg =>
         if (responsePkg.payload.command != KadCommand.FindNode) {
@@ -89,9 +92,9 @@ final case class DefaultFindNodeClient[F[_]: Sync](
 
   private def raiseUnexpectedCommandError(
       opId: OpId
-  ): F[Either[PackageDataParsingError, List[Contact]]] = Sync[F].pure(
+  ): F[Either[DecodingFailure, List[Contact]]] = Sync[F].pure(
     Left(
-      PackageDataParsingError(
+      DecodingFailure(
         s"Unexpected Command for Op(${opId.value})"
       )
     )
@@ -99,27 +102,27 @@ final case class DefaultFindNodeClient[F[_]: Sync](
 
   private def parsePayloadDataToContacts(
       response: KadResponsePackage
-  ): F[Either[PackageDataParsingError, List[Contact]]] =
+  ): F[Either[DecodingFailure, List[Contact]]] =
     Sync[F].delay {
       val payloadData: Array[Byte] = response.payload.data
       val indexes: Seq[Int] =
         findPatternIndexes(Tag.Contact.tagData, payloadData)
-      val result: List[Either[PackageDataParsingError, Contact]] =
+      val result: List[Either[DecodingFailure, Contact]] =
         slideContactsByIndexes(indexes, payloadData).toList
 
       toContactsResponse(result)
     }
 
   private def toContactsResponse(
-      result: List[Either[PackageDataParsingError, Contact]]
-  ): Either[PackageDataParsingError, List[Contact]] = {
+      result: List[Either[DecodingFailure, Contact]]
+  ): Either[DecodingFailure, List[Contact]] = {
     val errors = collectErrors(result)
 
     if (errors.isEmpty) {
       Right(collectContacts(result))
     } else {
       Left(
-        PackageDataParsingError(
+        DecodingFailure(
           s"Error while parsing response contacts:\n\n* ${errors.map(_.message).mkString("\n")}"
         )
       )
@@ -127,7 +130,7 @@ final case class DefaultFindNodeClient[F[_]: Sync](
   }
 
   private def collectContacts(
-      result: List[Either[PackageDataParsingError, Contact]]
+      result: List[Either[DecodingFailure, Contact]]
   ): List[Contact] = result
     .flatMap(_ match {
       case Right(c) => List(c)
@@ -135,8 +138,8 @@ final case class DefaultFindNodeClient[F[_]: Sync](
     })
 
   private def collectErrors(
-      result: List[Either[PackageDataParsingError, Contact]]
-  ): List[PackageDataParsingError] = result
+      result: List[Either[DecodingFailure, Contact]]
+  ): List[DecodingFailure] = result
     .flatMap(_ match {
       case Left(error) => List(error)
       case _           => List()
@@ -145,19 +148,21 @@ final case class DefaultFindNodeClient[F[_]: Sync](
   private def slideContactsByIndexes(
       indexes: Seq[Int],
       payloadData: Array[Byte]
-  ): Iterator[Either[PackageDataParsingError, Contact]] = indexes match {
-    case Seq(x) => Iterator(Contact.parse(payloadData.drop(x)))
+  ): Iterator[Either[DecodingFailure, Contact]] = indexes match {
+    case Seq(x) => Iterator(payloadData.drop(x).toObject[Contact])
     case _ =>
       indexes
         .sliding(2, 1)
         .map(pairSeq => {
           pairSeq match {
             case Seq(x, y) => {
-              Contact.parse(payloadData.slice(x, y - Tag.Contact.tagData.size))
+              payloadData
+                .slice(x, y - Tag.Contact.tagData.size)
+                .toObject[Contact]
             }
           }
         })
-        .concat(Iterator(Contact.parse(payloadData.drop(indexes.last))))
+        .concat(Iterator(payloadData.drop(indexes.last).toObject[Contact]))
   }
 
   private def findPatternIndexes(
