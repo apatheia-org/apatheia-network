@@ -6,6 +6,7 @@ import java.util.UUID
 import java.net.InetSocketAddress
 import org.apatheia.model.NodeId
 import org.apatheia.codec.Codec._
+import org.apatheia.network.model.Codecs.ContactCodec._
 import org.apatheia.network.model.Codecs.NodeIdCodec._
 import org.apatheia.codec.DecodingFailure
 

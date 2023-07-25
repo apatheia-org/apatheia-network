@@ -6,6 +6,7 @@ import org.apatheia.model.NodeId
 import java.net.InetSocketAddress
 import java.util.UUID
 import org.apatheia.codec.Codec._
+import org.apatheia.codec.DecodingFailure
 
 class KadResponsePackageSpec extends AnyFlatSpec with Matchers {
 
