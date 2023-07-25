@@ -3,8 +3,9 @@ package org.apatheia.network.model
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.apatheia.network.model.ServerPort
-import org.apatheia.error.PackageDataParsingError
 import java.nio.ByteBuffer
+import org.apatheia.codec.Codec._
+import org.apatheia.codec.DecodingFailure
 
 class ServerPortSpec extends AnyWordSpec with Matchers {
 
@@ -15,7 +16,7 @@ class ServerPortSpec extends AnyWordSpec with Matchers {
       val byteArray: Array[Byte] =
         ByteBuffer.allocate(ServerPort.byteSize).putInt(portValue).array()
 
-      val result = ServerPort.parse(byteArray)
+      val result = byteArray.toObject[ServerPort]
 
       result shouldBe Right(ServerPort(portValue))
     }
@@ -24,10 +25,10 @@ class ServerPortSpec extends AnyWordSpec with Matchers {
       val invalidByteArray: Array[Byte] =
         Array(0, 0, 0) // Invalid byte array length
 
-      val result = ServerPort.parse(invalidByteArray)
+      val result = invalidByteArray.toObject[ServerPort]
 
       result shouldBe Left(
-        PackageDataParsingError("Error while parsing ServerPort corrupt data")
+        DecodingFailure("Error while parsing ServerPort corrupt data")
       )
     }
 

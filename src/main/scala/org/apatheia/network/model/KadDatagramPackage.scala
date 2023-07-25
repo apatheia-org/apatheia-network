@@ -1,26 +1,33 @@
 package org.apatheia.network.model
 
-import org.apatheia.model.PackageData
-import org.apatheia.error.PackageDataParsingError
-import org.apatheia.network.model.UDPDatagramParser
+import org.apatheia.codec.Codec._
+import org.apatheia.codec.DecodingFailure
+import org.apatheia.codec.Encoder
+import org.apatheia.codec.Decoder
 
 case class KadDatagramPackage(
     headers: KadRequestHeaders,
     payload: KadDatagramPayload
-) extends PackageData {
-  override def toByteArray: Array[Byte] =
-    Array.concat(headers.toByteArray, payload.toByteArray)
-}
+)
 
-object KadDatagramPackage extends UDPDatagramParser[KadDatagramPackage] {
-  override def parse(
-      udpDatagram: UDPDatagram
-  ): Either[PackageDataParsingError, KadDatagramPackage] = for {
-    headers <- KadRequestHeaders.parse(
-      udpDatagram.data.take(KadRequestHeaders.byteSize)
-    )
-    payload <- KadDatagramPayload.parse(
-      udpDatagram.data.drop(KadRequestHeaders.byteSize)
-    )
-  } yield (KadDatagramPackage(headers, payload))
+object KadDatagramPackage {
+  implicit val decoder: Decoder[KadDatagramPackage] =
+    new Decoder[KadDatagramPackage] {
+      override def toObject(
+          data: Array[Byte]
+      ): Either[DecodingFailure, KadDatagramPackage] = for {
+        headers <- data
+          .take(KadRequestHeaders.byteSize)
+          .toObject[KadRequestHeaders]
+        payload <- data
+          .drop(KadRequestHeaders.byteSize)
+          .toObject[KadDatagramPayload]
+      } yield (KadDatagramPackage(headers, payload))
+    }
+
+  implicit val encoder: Encoder[KadDatagramPackage] =
+    new Encoder[KadDatagramPackage] {
+      override def toByteArray(k: KadDatagramPackage): Array[Byte] =
+        Array.concat(k.headers.toByteArray, k.payload.toByteArray)
+    }
 }

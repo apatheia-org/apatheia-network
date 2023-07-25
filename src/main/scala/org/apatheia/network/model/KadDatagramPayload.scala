@@ -1,23 +1,29 @@
 package org.apatheia.network.model
 
-import org.apatheia.model.PackageData
-import org.apatheia.model.PackageDataParser
-import org.apatheia.error.PackageDataParsingError
+import org.apatheia.codec.Codec._
+import org.apatheia.codec.DecodingFailure
+import org.apatheia.codec.Encoder
+import org.apatheia.codec.Decoder
 
 final case class KadDatagramPayload(
     command: KadCommand,
     data: Array[Byte]
-) extends PackageData {
-  override def toByteArray: Array[Byte] =
-    Array.concat(command.toByteArray, data)
-}
+)
 
-object KadDatagramPayload extends PackageDataParser[KadDatagramPayload] {
-  override def parse(
-      byteArray: Array[Byte]
-  ): Either[PackageDataParsingError, KadDatagramPayload] =
-    KadCommand
-      .parse(Array(byteArray.head))
-      .flatMap(command => Right(KadDatagramPayload(command, byteArray.drop(1))))
+object KadDatagramPayload {
+  implicit val encoder: Encoder[KadDatagramPayload] =
+    new Encoder[KadDatagramPayload] {
+      override def toByteArray(k: KadDatagramPayload): Array[Byte] =
+        Array.concat(k.command.toByteArray, k.data)
+    }
 
+  implicit val decoder: Decoder[KadDatagramPayload] =
+    new Decoder[KadDatagramPayload] {
+      override def toObject(
+          data: Array[Byte]
+      ): Either[DecodingFailure, KadDatagramPayload] = Array(data.head)
+        .toObject[KadCommand]
+        .flatMap(command => Right(KadDatagramPayload(command, data.drop(1))))
+
+    }
 }

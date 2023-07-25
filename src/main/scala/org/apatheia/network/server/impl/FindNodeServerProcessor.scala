@@ -5,7 +5,6 @@ import org.apatheia.network.model.KadDatagramPackage
 import org.apatheia.network.server.KademliaServerProcessor
 import org.apatheia.network.meta.LocalhostMetadataRef
 import org.apatheia.model.NodeId
-import org.apatheia.algorithm.findnode.sub.FindNodeSubscriberAlgorithm
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 import org.apatheia.network.client.UDPClient
 import org.apatheia.model.Contact
@@ -18,10 +17,14 @@ import org.apatheia.network.model.KadResponsePackage
 import org.apatheia.network.model.KadCommand
 import org.apatheia.network.model.KadResponsePayload
 import org.apatheia.network.model.Tag
+import org.apatheia.algorithm.findnode.FindNodeAlgorithm
+import org.apatheia.codec.Codec._
+import org.apatheia.network.model.Codecs.NodeIdCodec._
+import org.apatheia.network.model.Codecs.ContactCodec._
 
 case class FindNodeServerProcessor[F[_]: Async](
     localhostMetadataRef: LocalhostMetadataRef[F],
-    findNodeSubscriberAlgorithm: FindNodeSubscriberAlgorithm[F],
+    findNodeSubscriberAlgorithm: FindNodeAlgorithm[F],
     requestServerClient: UDPClient[F]
 ) extends KademliaServerProcessor[F] {
 
@@ -47,12 +50,14 @@ case class FindNodeServerProcessor[F[_]: Async](
   private def findNode(
       udpDatagram: KadDatagramPackage,
       localhostMetadata: LocalhostMetadata
-  ): F[List[Contact]] = NodeId.parse(udpDatagram.payload.data) match {
+  ): F[List[Contact]] = udpDatagram.payload.data.toObject[NodeId] match {
     case Right(targetId) =>
-      findNodeSubscriberAlgorithm.findNode(
-        targetId,
-        localhostMetadata.routingTable
-      )
+      findNodeSubscriberAlgorithm
+        .findNode(
+          routingTable = localhostMetadata.routingTable,
+          targetId = targetId
+        )
+        .map(_.toList)
     case Left(error) =>
       logger
         .error(

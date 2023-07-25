@@ -1,6 +1,6 @@
 package org.apatheia.network.error
 
-import org.apatheia.error.PackageDataParsingError
+import org.apatheia.codec.DecodingFailure
 
 case class UDPServerError(message: String) extends Error
 
@@ -16,9 +16,9 @@ object UDPServerError {
       )
 
   class DatagramParsingError(
-      packageDataParsingError: PackageDataParsingError
+      packageDataParsingError: DecodingFailure
   ) extends UDPServerError(
-        "Error to extract buffer from incoming UDP message"
+        s"Error while decoding datagram from incoming UDP message: ${packageDataParsingError.message}"
       )
 
 }

@@ -1,44 +1,54 @@
 package org.apatheia.network.model
 
 import org.apatheia.model.NodeId
-import org.apatheia.model.PackageData
-import org.apatheia.error.PackageDataParsingError
-import org.apatheia.network.model.BytesizedPackageData._
+import org.apatheia.codec.{Encoder, Decoder}
+import org.apatheia.codec.Codec._
+import org.apatheia.codec.DecodingFailure
+import org.apatheia.network.model.Codecs.NodeIdCodec
+import org.apatheia.network.model.Codecs.NodeIdCodec._
 
 final case class KadRequestHeaders(
     from: NodeId,
     to: NodeId,
     opId: OpId,
     responseServerPort: ServerPort
-) extends PackageData {
+)
 
-  override def toByteArray: Array[Byte] =
-    Array.concat(
-      from.toByteArray,
-      to.toByteArray,
-      opId.toByteArray,
-      responseServerPort.toByteArray
-    )
+object KadRequestHeaders {
 
-}
+  val byteSize: Int =
+    NodeIdCodec.BYTESIZE + NodeIdCodec.BYTESIZE + OpId.byteSize + ServerPort.byteSize
 
-object KadRequestHeaders extends DefaultBytesizedParser[KadRequestHeaders] {
-  override val byteSize: Int =
-    NodeId.byteSize + NodeId.byteSize + OpId.byteSize + ServerPort.byteSize
+  implicit val encoder: Encoder[KadRequestHeaders] =
+    new Encoder[KadRequestHeaders] {
+      override def toByteArray(k: KadRequestHeaders): Array[Byte] =
+        Array.concat(
+          k.from.toByteArray,
+          k.to.toByteArray,
+          k.opId.toByteArray,
+          k.responseServerPort.toByteArray
+        )
+    }
 
-  override def parse(
-      byteArray: Array[Byte]
-  ): Either[PackageDataParsingError, KadRequestHeaders] = for {
-    from <- NodeId.parse(byteArray.take(NodeId.byteSize))
-    to <- NodeId.parse(byteArray.drop(NodeId.byteSize).take(NodeId.byteSize))
-    opId <- OpId.parse(
-      byteArray.drop(2 * NodeId.byteSize).take(OpId.byteSize)
-    )
-    responseServerPort <- ServerPort.parse(
-      byteArray
-        .drop(2 * NodeId.byteSize + OpId.byteSize)
-        .take(ServerPort.byteSize)
-    )
-  } yield (KadRequestHeaders(from, to, opId, responseServerPort))
+  implicit val decoder: Decoder[KadRequestHeaders] =
+    new Decoder[KadRequestHeaders] {
+      override def toObject(
+          data: Array[Byte]
+      ): Either[DecodingFailure, KadRequestHeaders] = for {
+        from <- data.take(NodeIdCodec.BYTESIZE).toObject[NodeId]
+        to <- data
+          .drop(NodeIdCodec.BYTESIZE)
+          .take(NodeIdCodec.BYTESIZE)
+          .toObject[NodeId]
+        opId <- data
+          .drop(2 * NodeIdCodec.BYTESIZE)
+          .take(OpId.byteSize)
+          .toObject[OpId]
+        responseServerPort <- data
+          .drop(2 * NodeIdCodec.BYTESIZE + OpId.byteSize)
+          .take(ServerPort.byteSize)
+          .toObject[ServerPort]
+      } yield (KadRequestHeaders(from, to, opId, responseServerPort))
 
+    }
 }

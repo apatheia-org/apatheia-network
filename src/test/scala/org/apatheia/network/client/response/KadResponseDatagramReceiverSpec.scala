@@ -20,6 +20,7 @@ import org.scalatest.OptionValues
 import org.apatheia.network.model.KadResponseHeaders
 import org.apatheia.network.model.KadResponsePayload
 import org.apatheia.network.model.KadCommand
+import org.apatheia.codec.Codec._
 
 class KadResponseDatagramReceiverSpec
     extends AnyFlatSpec
