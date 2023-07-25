@@ -8,9 +8,11 @@ import cats.implicits._
 import cats.Applicative
 import org.apatheia.algorithm.findnode.FindNodeAlgorithm
 import org.apatheia.algorithm.findnode.FindNodeClient
+import org.apatheia.network.meta.LocalhostMetadataRef
 
 case class PublisherFindNodeAlgorithm[F[_]: Async: Applicative](
     findNodeClient: FindNodeClient[F],
+    localhostMetadataRef: LocalhostMetadataRef[F],
     maxIterations: Int = 20
 ) extends FindNodeAlgorithm[F] {
 
@@ -30,7 +32,7 @@ case class PublisherFindNodeAlgorithm[F[_]: Async: Applicative](
   private[findnode] def retryFindNodeRequest(
       iteration: Int,
       routingTable: RoutingTable,
-      closestContacts: List[Contact],
+      closestContacts: Set[Contact],
       target: NodeId
   ): F[Set[Contact]] =
     if (iteration == 0) {
@@ -51,22 +53,23 @@ case class PublisherFindNodeAlgorithm[F[_]: Async: Applicative](
             closestContacts = closestContacts,
             target = target
           )
-          // TODO update local routing table with response
         } else {
-          Async[F].pure(foundContacts.toSet)
+          val contactsSet: Set[Contact] = foundContacts.toSet
+          localhostMetadataRef
+            .updateRoutingTable(contactsSet)
+            .map(_ => contactsSet)
         }
       }
     }
 
   private def filterFromTargetNode(
-      closestContacts: List[Contact],
+      closestContacts: Set[Contact],
       target: NodeId
   ): F[Set[Contact]] =
     Async[F]
       .pure(
         closestContacts
           .filter(_.nodeId.value != target.value)
-          .toSet[Contact]
       )
 
   private def sendFindNodeRequests(

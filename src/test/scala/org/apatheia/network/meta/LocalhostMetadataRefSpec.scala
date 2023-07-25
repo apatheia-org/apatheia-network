@@ -52,7 +52,7 @@ class LocalhostMetadataRefSpec extends AnyFlatSpec with Matchers {
         port = 1000,
         ip = "0.0.0.0"
       ),
-      routingTable = RoutingTable(NodeId(1), List.empty, 20),
+      routingTable = RoutingTable(NodeId(1), Set.empty, 20),
       serverPort = ServerPort(2000),
       responseServerPort = ServerPort(3000)
     )
