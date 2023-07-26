@@ -103,10 +103,7 @@ final case class DefaultFindNodeClient[F[_]: Sync](
   private def parsePayloadDataToContacts(
       response: KadResponsePackage
   ): F[Either[DecodingFailure, List[Contact]]] =
-    Sync[F].delay {
-      val payloadData: Array[Byte] = response.payload.data
-      payloadData.toObject[Set[Contact]].map(_.toList)
-    }
+    Sync[F].delay(response.payload.data.toObject[Set[Contact]].map(_.toList))
 
   private def collectContacts(
       result: List[Either[DecodingFailure, Contact]]

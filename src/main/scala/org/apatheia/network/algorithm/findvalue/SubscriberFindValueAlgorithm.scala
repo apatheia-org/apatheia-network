@@ -31,7 +31,7 @@ class SubscriberFindValueAlgorithm[F[_]: Async](
           Left(
             FindValueError(
               message =
-                s"Data for Node ${targetId} was not found in local storage of this host",
+                s"Data for Node ${targetId} was not found in local storage of remote host",
               contacts =
                 localhostMetadata.routingTable.findClosestContacts(targetId)
             )
