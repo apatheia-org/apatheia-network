@@ -79,6 +79,6 @@ case class PublisherFindNodeAlgorithm[F[_]: Async: Applicative](
     nodeContacts.toList
       .map(contact => findNodeClient.requestContacts(contact, target))
       .flatTraverse(a => a)
-      .flatMap(a => Async[F].pure((a.toList.toSet[Contact])))
+      .flatMap(a => Async[F].pure((a.toSet[Contact])))
 
 }
