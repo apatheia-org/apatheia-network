@@ -20,6 +20,20 @@ object Codecs {
 
   val CHARSET: Charset = StandardCharsets.UTF_8
 
+  implicit val intDecoder: Decoder[Int] = new Decoder[Int] {
+    override def toObject(
+        data: Array[Byte]
+    ): Either[DecodingFailure, Int] = Try(
+      ByteBuffer.wrap(data).getInt()
+    ).toEither.leftFlatMap(error =>
+      Left(DecodingFailure(s"Error while decoding integer: ${error}"))
+    )
+  }
+
+  implicit val intEncoder: Encoder[String] = new Encoder[String] {
+    override def toByteArray(str: String): Array[Byte] = str.getBytes(CHARSET)
+  }
+
   implicit val stringDecoder: Decoder[String] = new Decoder[String] {
     override def toObject(
         data: Array[Byte]
@@ -38,35 +52,23 @@ object Codecs {
     implicit val contactDecoder: Decoder[Contact] = new Decoder[Contact] {
       override def toObject(
           data: Array[Byte]
-      ): Either[DecodingFailure, Contact] = data
-        .take(Codecs.NodeIdCodec.BYTESIZE)
-        .toObject[NodeId]
-        .flatMap(nodeId =>
-          Try(
-            Contact(
-              nodeId = nodeId,
-              port = ByteBuffer
-                .wrap(
-                  data
-                    .slice(
-                      Codecs.NodeIdCodec.BYTESIZE,
-                      Codecs.NodeIdCodec.BYTESIZE + portByteSize
-                    )
-                )
-                .getInt(),
-              ip = new String(
-                data.drop(Codecs.NodeIdCodec.BYTESIZE + portByteSize),
-                CHARSET
-              )
-            )
-          ).toEither.leftFlatMap(e =>
-            Left(
-              DecodingFailure(
-                s"Unexpected error while parsing a byte array into a Contact: ${e}"
-              )
-            )
+      ): Either[DecodingFailure, Contact] = for {
+        nodeId <- data.take(Codecs.NodeIdCodec.BYTESIZE).toObject[NodeId]
+        ip <- data
+          .drop(Codecs.NodeIdCodec.BYTESIZE + portByteSize)
+          .toObject[String]
+        port <- data
+          .slice(
+            Codecs.NodeIdCodec.BYTESIZE,
+            Codecs.NodeIdCodec.BYTESIZE + portByteSize
           )
-        )
+          .toObject[Int]
+      } yield (Contact(
+        nodeId = nodeId,
+        port = port,
+        ip = ip
+      ))
+
     }
 
     implicit val contactEncoder: Encoder[Contact] = new Encoder[Contact] {
