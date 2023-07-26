@@ -1,26 +1,26 @@
 package org.apatheia.algorithm.findnode
 
+import cats.effect.kernel.Sync
+import cats.implicits._
+import org.apatheia.codec.Codec._
+import org.apatheia.codec.DecodingFailure
 import org.apatheia.model.Contact
-import org.apatheia.network.client.response.consumer.KadResponseConsumer
-import org.apatheia.network.model.OpId
-import scala.concurrent.duration.Duration
-import org.apatheia.network.model.KadResponsePackage
+import org.apatheia.model.NodeId
 import org.apatheia.network.client.UDPClient
+import org.apatheia.network.client.response.consumer.KadResponseConsumer
+import org.apatheia.network.meta.LocalhostMetadataRef
+import org.apatheia.network.model.Codecs.ContactSetCodec._
+import org.apatheia.network.model.Codecs.NodeIdCodec._
+import org.apatheia.network.model.KadCommand
 import org.apatheia.network.model.KadDatagramPackage
 import org.apatheia.network.model.KadDatagramPayload
-import org.apatheia.network.model.KadCommand
-import org.apatheia.model.NodeId
-import cats.implicits._
-import java.net.InetSocketAddress
-import org.typelevel.log4cats.slf4j.Slf4jLogger
-import org.apatheia.network.meta.LocalhostMetadataRef
-import cats.effect.kernel.Sync
 import org.apatheia.network.model.KadRequestHeaders
-import org.apatheia.network.model.Tag
-import org.apatheia.codec.Codec._
-import org.apatheia.network.model.Codecs.NodeIdCodec._
-import org.apatheia.network.model.Codecs.ContactCodec._
-import org.apatheia.codec.DecodingFailure
+import org.apatheia.network.model.KadResponsePackage
+import org.apatheia.network.model.OpId
+import org.typelevel.log4cats.slf4j.Slf4jLogger
+
+import java.net.InetSocketAddress
+import scala.concurrent.duration.Duration
 
 final case class DefaultFindNodeClient[F[_]: Sync](
     kadResponseConsumer: KadResponseConsumer[F],
@@ -105,29 +105,8 @@ final case class DefaultFindNodeClient[F[_]: Sync](
   ): F[Either[DecodingFailure, List[Contact]]] =
     Sync[F].delay {
       val payloadData: Array[Byte] = response.payload.data
-      val indexes: Seq[Int] =
-        findPatternIndexes(Tag.Contact.tagData, payloadData)
-      val result: List[Either[DecodingFailure, Contact]] =
-        slideContactsByIndexes(indexes, payloadData).toList
-
-      toContactsResponse(result)
+      payloadData.toObject[Set[Contact]].map(_.toList)
     }
-
-  private def toContactsResponse(
-      result: List[Either[DecodingFailure, Contact]]
-  ): Either[DecodingFailure, List[Contact]] = {
-    val errors = collectErrors(result)
-
-    if (errors.isEmpty) {
-      Right(collectContacts(result))
-    } else {
-      Left(
-        DecodingFailure(
-          s"Error while parsing response contacts:\n\n* ${errors.map(_.message).mkString("\n")}"
-        )
-      )
-    }
-  }
 
   private def collectContacts(
       result: List[Either[DecodingFailure, Contact]]
@@ -144,50 +123,5 @@ final case class DefaultFindNodeClient[F[_]: Sync](
       case Left(error) => List(error)
       case _           => List()
     })
-
-  private def slideContactsByIndexes(
-      indexes: Seq[Int],
-      payloadData: Array[Byte]
-  ): Iterator[Either[DecodingFailure, Contact]] = indexes match {
-    case Seq(x) => Iterator(payloadData.drop(x).toObject[Contact])
-    case _ =>
-      indexes
-        .sliding(2, 1)
-        .map(pairSeq => {
-          pairSeq match {
-            case Seq(x, y) => {
-              payloadData
-                .slice(x, y - Tag.Contact.tagData.size)
-                .toObject[Contact]
-            }
-          }
-        })
-        .concat(Iterator(payloadData.drop(indexes.last).toObject[Contact]))
-  }
-
-  private def findPatternIndexes(
-      pattern: Array[Byte],
-      data: Array[Byte]
-  ): Seq[Int] = {
-    val patternLength = pattern.length
-    val dataLength = data.length
-
-    if (patternLength > dataLength) {
-      Seq.empty[Int]
-    } else {
-      val maxStartIndex = dataLength - patternLength
-      val patternStartByte = pattern(0)
-
-      (0 to maxStartIndex)
-        .filter { i =>
-          data(i) == patternStartByte && pattern.indices.forall(j =>
-            data(i + j) == pattern(j)
-          )
-        }
-        .map(
-          _ + Tag.Contact.tagData.size
-        )
-    }
-  }
 
 }

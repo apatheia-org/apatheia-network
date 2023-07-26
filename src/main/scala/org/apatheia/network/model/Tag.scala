@@ -15,4 +15,8 @@ object Tag {
     override val tag: String = "[CONTACT]"
   }
 
+  case object FindValueResponse extends Tag {
+    override val tag: String = "[FIND_VALUE_RESPONSE]"
+  }
+
 }

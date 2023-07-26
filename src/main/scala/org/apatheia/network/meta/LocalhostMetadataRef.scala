@@ -1,7 +1,7 @@
 package org.apatheia.network.meta
 
-import org.apatheia.network.model.LocalhostMetadata
 import org.apatheia.model.Contact
+import org.apatheia.network.model.LocalhostMetadata
 
 trait LocalhostMetadataRef[F[_]] {
   def get: F[LocalhostMetadata]

@@ -1,13 +1,13 @@
 package org.apatheia.algorithm.findnode
 
-import org.apatheia.model.RoutingTable
-import org.apatheia.model.NodeId
-import org.apatheia.model.Contact
+import cats.Applicative
 import cats.effect.kernel.Async
 import cats.implicits._
-import cats.Applicative
 import org.apatheia.algorithm.findnode.FindNodeAlgorithm
 import org.apatheia.algorithm.findnode.FindNodeClient
+import org.apatheia.model.Contact
+import org.apatheia.model.NodeId
+import org.apatheia.model.RoutingTable
 import org.apatheia.network.meta.LocalhostMetadataRef
 
 case class PublisherFindNodeAlgorithm[F[_]: Async: Applicative](
@@ -79,6 +79,6 @@ case class PublisherFindNodeAlgorithm[F[_]: Async: Applicative](
     nodeContacts.toList
       .map(contact => findNodeClient.requestContacts(contact, target))
       .flatTraverse(a => a)
-      .flatMap(a => Async[F].pure((a.toSet[Contact])))
+      .flatMap(a => Async[F].pure((a.toList.toSet[Contact])))
 
 }
