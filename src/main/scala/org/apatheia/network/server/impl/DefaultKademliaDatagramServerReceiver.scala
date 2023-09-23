@@ -1,21 +1,25 @@
 package org.apatheia.network.server.impl
 
 import cats.effect.kernel.Async
-import org.apatheia.network.server.UDPDatagramReceiver
-import org.apatheia.network.model.UDPDatagram
-import org.apatheia.network.model.KadDatagramPackage
-import org.apatheia.network.model.KadCommand
-import org.apatheia.network.server.KademliaServerProcessor
-import org.typelevel.log4cats.slf4j.Slf4jLogger
-import org.apatheia.network.meta.LocalhostMetadataRef
-import org.apatheia.network.client.UDPClient
-import org.apatheia.algorithm.findnode.sub.SubscriberFindNodeAlgorithm
 import cats.implicits._
+import org.apatheia.algorithm.findnode.sub.SubscriberFindNodeAlgorithm
 import org.apatheia.codec.Codec._
+import org.apatheia.model.NodeId
+import org.apatheia.network.algorithm.findvalue.SubscriberFindValueAlgorithm
+import org.apatheia.network.client.UDPClient
+import org.apatheia.network.meta.LocalhostMetadataRef
+import org.apatheia.network.model.KadCommand
+import org.apatheia.network.model.KadDatagramPackage
+import org.apatheia.network.model.UDPDatagram
+import org.apatheia.network.server.KademliaServerProcessor
+import org.apatheia.network.server.UDPDatagramReceiver
+import org.apatheia.store.ApatheiaKeyValueStore
+import org.typelevel.log4cats.slf4j.Slf4jLogger
 
 case class DefaultKademliaDatagramServerReceiver[F[_]: Async](
     localhostMetadataRef: LocalhostMetadataRef[F],
-    requestServerClient: UDPClient[F]
+    requestServerClient: UDPClient[F],
+    apatheiaKeyValueStore: ApatheiaKeyValueStore[NodeId, Array[Byte]]
 ) extends UDPDatagramReceiver[F] {
 
   private final val logger = Slf4jLogger.getLogger[F]
@@ -24,6 +28,14 @@ case class DefaultKademliaDatagramServerReceiver[F[_]: Async](
       KadCommand.FindNode -> FindNodeServerProcessor[F](
         localhostMetadataRef = localhostMetadataRef,
         findNodeSubscriberAlgorithm = SubscriberFindNodeAlgorithm[F](),
+        requestServerClient = requestServerClient
+      ),
+      KadCommand.FindValue -> new FindValueServerProcessor[F](
+        localhostMetadataRef = localhostMetadataRef,
+        findValueSubscriberAlgorithm = new SubscriberFindValueAlgorithm[F](
+          apatheiaKeyValueStore = apatheiaKeyValueStore,
+          localhostMetadataRef = localhostMetadataRef
+        ),
         requestServerClient = requestServerClient
       )
     )

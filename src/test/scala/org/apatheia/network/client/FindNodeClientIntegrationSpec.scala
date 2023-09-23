@@ -1,34 +1,35 @@
 package org.apatheia.server.impl
 
-import org.scalatest.flatspec.AnyFlatSpec
-import org.scalatest.matchers.should.Matchers
-import org.apatheia.network.server.impl.DefaultKademliaDatagramServerReceiver
+import cats.effect.IO
+import cats.effect.std.AtomicCell
+import cats.effect.std.Dispatcher
+import cats.effect.unsafe.implicits.global
+import org.apatheia.algorithm.findnode.DefaultFindNodeClient
 import org.apatheia.model.Contact
-import org.apatheia.network.model.LocalhostMetadata
 import org.apatheia.model.NodeId
 import org.apatheia.model.RoutingTable
-import cats.effect.std.AtomicCell
-import cats.effect.IO
-import org.apatheia.network.server.impl.DefaultUDPServer
-import org.apatheia.network.model.ServerPort
-import org.apatheia.network.meta.DefaultLocalhostMetadataRef
-import org.apatheia.store.KeyValueStore
-import org.apatheia.store.ApatheiaKeyValueStore
-import org.apatheia.network.model.OpId
-import org.apatheia.network.model.KadResponsePackage
-import scala.collection.immutable.HashMap
-import org.apatheia.network.client.response.store.DefaultResponseStoreRef
-import org.apatheia.network.client.response.KadResponseDatagramReceiver
-import cats.effect.std.Dispatcher
-import org.apatheia.network.model.MaxClientBufferSize
 import org.apatheia.network.client.impl.DefaultUDPClient
-import org.apatheia.network.model.MaxClientTimeout
+import org.apatheia.network.client.response.KadResponseDatagramReceiver
 import org.apatheia.network.client.response.consumer.DefaultKadResponseConsumer
-import org.apatheia.algorithm.findnode.DefaultFindNodeClient
-import scala.concurrent.duration._
-import cats.effect.unsafe.implicits.global
+import org.apatheia.network.client.response.store.DefaultResponseStoreRef
+import org.apatheia.network.meta.DefaultLocalhostMetadataRef
+import org.apatheia.network.model.KadResponsePackage
+import org.apatheia.network.model.LocalhostMetadata
+import org.apatheia.network.model.MaxClientBufferSize
+import org.apatheia.network.model.MaxClientTimeout
+import org.apatheia.network.model.OpId
+import org.apatheia.network.model.ServerPort
+import org.apatheia.network.server.impl.DefaultKademliaDatagramServerReceiver
+import org.apatheia.network.server.impl.DefaultUDPServer
+import org.apatheia.store.ApatheiaKeyValueStore
+import org.apatheia.store.KeyValueStore
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 import org.typelevel.log4cats.slf4j.Slf4jLogger
+
 import java.net.InetSocketAddress
+import scala.collection.immutable.HashMap
+import scala.concurrent.duration._
 
 class FindNodeClientIntegrationSpec extends AnyFlatSpec with Matchers {
 
@@ -41,6 +42,9 @@ class FindNodeClientIntegrationSpec extends AnyFlatSpec with Matchers {
           cell <- AtomicCell[IO].of[LocalhostMetadata](
             localhostMetadata
           )
+          apatheiaKeyValueStore = ApatheiaKeyValueStore[NodeId, Array[Byte]](
+            HashMap.empty
+          )
           localhostMetadataRef = DefaultLocalhostMetadataRef[IO](cell)
           remoteCell <- AtomicCell[IO].of[LocalhostMetadata](
             remoteMetadata
@@ -50,9 +54,7 @@ class FindNodeClientIntegrationSpec extends AnyFlatSpec with Matchers {
           )
           keyValueStoreCell <- AtomicCell[IO]
             .of[KeyValueStore[OpId, KadResponsePackage]](
-              ApatheiaKeyValueStore[OpId, KadResponsePackage](
-                HashMap.empty
-              )
+              ApatheiaKeyValueStore[OpId, KadResponsePackage](HashMap.empty)
             )
           defaultResponseStoreRef = DefaultResponseStoreRef[IO](
             keyValueStoreCell
@@ -74,7 +76,8 @@ class FindNodeClientIntegrationSpec extends AnyFlatSpec with Matchers {
           )
           kademliaServerProcessor = DefaultKademliaDatagramServerReceiver[IO](
             localhostMetadataRef = remoteLocalhostMetadataRef,
-            requestServerClient = responseServerClient
+            requestServerClient = responseServerClient,
+            apatheiaKeyValueStore = apatheiaKeyValueStore
           )
           kademliaUdpServer = DefaultUDPServer[IO](
             serverPort = remoteServerPort,
@@ -123,6 +126,9 @@ class FindNodeClientIntegrationSpec extends AnyFlatSpec with Matchers {
           cell <- AtomicCell[IO].of[LocalhostMetadata](
             localhostMetadata
           )
+          apatheiaKeyValueStore = ApatheiaKeyValueStore[NodeId, Array[Byte]](
+            HashMap.empty
+          )
           localhostMetadataRef = DefaultLocalhostMetadataRef[IO](cell)
           remoteCell <- AtomicCell[IO].of[LocalhostMetadata](
             // no contact with target id
@@ -157,7 +163,8 @@ class FindNodeClientIntegrationSpec extends AnyFlatSpec with Matchers {
           )
           kademliaServerProcessor = DefaultKademliaDatagramServerReceiver[IO](
             localhostMetadataRef = remoteLocalhostMetadataRef,
-            requestServerClient = responseServerClient
+            requestServerClient = responseServerClient,
+            apatheiaKeyValueStore = apatheiaKeyValueStore
           )
           kademliaUdpServer = DefaultUDPServer[IO](
             serverPort = remoteServerPort,
@@ -200,7 +207,7 @@ class FindNodeClientIntegrationSpec extends AnyFlatSpec with Matchers {
       .size shouldBe 2
   }
 
-  it should "breach timeout if no response is sent" in new TestContext {
+  it should "breach timeout if no response is received" in new TestContext {
     Dispatcher[IO]
       .use(implicit dispatcher => {
         for {
