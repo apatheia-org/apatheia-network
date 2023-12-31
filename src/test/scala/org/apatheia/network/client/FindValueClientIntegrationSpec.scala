@@ -120,7 +120,7 @@ class FindValueClientIntegrationSpec
       })
       .unsafeRunSync()
 
-    Right(findValueResult.map(_.contact)) shouldBe Right(targetContact)
+    findValueResult.map(_.contact) shouldBe Right(targetContact)
   }
 
   it should "receive all contacts pointing to target node id when that target node is not found" in new TestContext {}
