@@ -1,26 +1,28 @@
 package org.apatheia.network.server.impl
 
 import cats.effect.kernel.Async
-import org.apatheia.network.model.KadDatagramPackage
-import org.apatheia.network.server.KademliaServerProcessor
-import org.apatheia.network.meta.LocalhostMetadataRef
-import org.apatheia.model.NodeId
-import org.typelevel.log4cats.slf4j.Slf4jLogger
-import org.apatheia.network.client.UDPClient
-import org.apatheia.model.Contact
-import org.apatheia.network.model.LocalhostMetadata
-import org.apatheia.network.model.KadResponseHeaders
-import org.apatheia.network.model.UDPDatagram
-import java.net.InetSocketAddress
 import cats.implicits._
-import org.apatheia.network.model.KadResponsePackage
-import org.apatheia.network.model.KadCommand
-import org.apatheia.network.model.KadResponsePayload
-import org.apatheia.network.model.Tag
 import org.apatheia.algorithm.findnode.FindNodeAlgorithm
 import org.apatheia.codec.Codec._
-import org.apatheia.network.model.Codecs.NodeIdCodec._
+import org.apatheia.model.Contact
+import org.apatheia.model.NodeId
+import org.apatheia.network.client.UDPClient
+import org.apatheia.network.meta.LocalhostMetadataRef
 import org.apatheia.network.model.Codecs.ContactCodec._
+import org.apatheia.network.model.Codecs.ContactSetCodec._
+import org.apatheia.network.model.Codecs.NodeIdCodec._
+import org.apatheia.network.model.KadCommand
+import org.apatheia.network.model.KadDatagramPackage
+import org.apatheia.network.model.KadResponseHeaders
+import org.apatheia.network.model.KadResponsePackage
+import org.apatheia.network.model.KadResponsePayload
+import org.apatheia.network.model.LocalhostMetadata
+import org.apatheia.network.model.Tag
+import org.apatheia.network.model.UDPDatagram
+import org.apatheia.network.server.KademliaServerProcessor
+import org.typelevel.log4cats.slf4j.Slf4jLogger
+
+import java.net.InetSocketAddress
 
 case class FindNodeServerProcessor[F[_]: Async](
     localhostMetadataRef: LocalhostMetadataRef[F],
@@ -48,9 +50,9 @@ case class FindNodeServerProcessor[F[_]: Async](
   } yield ()
 
   private def findNode(
-      udpDatagram: KadDatagramPackage,
+      kadDatagram: KadDatagramPackage,
       localhostMetadata: LocalhostMetadata
-  ): F[List[Contact]] = udpDatagram.payload.data.toObject[NodeId] match {
+  ): F[List[Contact]] = kadDatagram.payload.data.toObject[NodeId] match {
     case Right(targetId) =>
       findNodeSubscriberAlgorithm
         .findNode(
@@ -61,7 +63,7 @@ case class FindNodeServerProcessor[F[_]: Async](
     case Left(error) =>
       logger
         .error(
-          s"Unexpected error while processing FindNode request for Kademlia Datagram(${udpDatagram.headers}))"
+          s"Unexpected error while processing FindNode request for Kademlia Datagram(${kadDatagram.headers}))"
         )
         .map(_ => List.empty)
   }
@@ -89,12 +91,7 @@ case class FindNodeServerProcessor[F[_]: Async](
       kadDatagram: KadDatagramPackage,
       localhostMetadata: LocalhostMetadata
   ): F[Unit] = for {
-    contactsData <- Async[F].pure {
-      contacts
-        .map(formatWithTag)
-        .toArray
-        .flatten
-    }
+    contactsData <- Async[F].pure(contacts.toSet.toByteArray)
     kadResponsePackage = enrichWithMetadata(
       contactsData,
       kadDatagram,

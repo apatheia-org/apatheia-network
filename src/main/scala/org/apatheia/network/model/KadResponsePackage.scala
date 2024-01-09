@@ -1,8 +1,9 @@
 package org.apatheia.network.model
 
-import org.apatheia.codec.{Encoder, Decoder}
 import org.apatheia.codec.Codec._
+import org.apatheia.codec.Decoder
 import org.apatheia.codec.DecodingFailure
+import org.apatheia.codec.Encoder
 
 final case class KadResponsePackage(
     headers: KadResponseHeaders,
