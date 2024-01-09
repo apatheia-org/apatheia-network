@@ -59,3 +59,5 @@ ThisBuild / credentials += Credentials(
   "adrianobrito",
   System.getenv("GITHUB_TOKEN")
 )
+
+Test / parallelExecution := false
