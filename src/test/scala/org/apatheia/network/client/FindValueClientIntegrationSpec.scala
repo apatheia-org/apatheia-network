@@ -130,12 +130,12 @@ class FindValueClientIntegrationSpec
   trait TestContext {
     val localNodeId = NodeId(1)
     val remoteNodeId = NodeId(2)
-    val inetSocketAddress = new InetSocketAddress(3333)
-    val responseServerPort = ServerPort(3333)
-    val localServerPort = ServerPort(4444)
+    val inetSocketAddress = new InetSocketAddress(9999)
+    val responseServerPort = ServerPort(8888)
+    val localServerPort = ServerPort(7777)
 
-    val remoteResponseServerPort = ServerPort(5555)
-    val remoteServerPort = ServerPort(6666)
+    val remoteResponseServerPort = ServerPort(9998)
+    val remoteServerPort = ServerPort(9997)
 
     val localContact = Contact(
       nodeId = localNodeId,
